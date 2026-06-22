@@ -95,6 +95,7 @@ const Drums = (() => {
   }
 
   function kbDown(e) {
+    if (Router.getCurrent() !== 'drums') return;
     if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     const id = KB_MAP[e.key.toLowerCase()];
     if (!id) return;

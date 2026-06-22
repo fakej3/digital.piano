@@ -81,11 +81,11 @@ const Recorder = (() => {
         document.getElementById('recDownloadBtn').disabled = false;
       });
 
-      // Analyser for waveform vis
-      const tmpCtx = new AudioContext();
-      analyserNode = tmpCtx.createAnalyser();
+      // Analyser for waveform vis — reuse shared AudioContext
+      await audioEngine.init();
+      analyserNode = audioEngine.ctx.createAnalyser();
       analyserNode.fftSize = 1024;
-      const src = tmpCtx.createMediaStreamSource(micStream);
+      const src = audioEngine.ctx.createMediaStreamSource(micStream);
       src.connect(analyserNode);
 
       mediaRecorder.start(100);

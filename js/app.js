@@ -420,6 +420,21 @@ const App = (() => {
     Object.entries(instrInits).forEach(([page, fn]) => {
       Router.on(page, () => { fn(); trackInstrumentVisit(page); });
     });
+
+    // Stop active notes and remove keyboard handlers when leaving an instrument page
+    const cleanupMap = {
+      piano:    () => { if (typeof Piano  !== 'undefined') Piano.destroy();  },
+      synth:    () => { if (typeof Synth  !== 'undefined') Synth.destroy();  },
+      organ:    () => { if (typeof Organ  !== 'undefined') Organ.destroy();  },
+      violin:   () => { if (typeof Violin !== 'undefined') Violin.destroy(); },
+      flute:    () => { if (typeof Flute  !== 'undefined') Flute.destroy();  },
+      drums:    () => { if (typeof Drums  !== 'undefined') Drums.destroy();  },
+    };
+    let prevPage = null;
+    Router.onChange(page => {
+      if (prevPage && prevPage !== page && cleanupMap[prevPage]) cleanupMap[prevPage]();
+      prevPage = page;
+    });
   }
 
   // ── Loading screen ─────────────────────────────────────────────────────────

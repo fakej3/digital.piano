@@ -136,6 +136,7 @@ const Piano = (() => {
   }
 
   function keyboardHandler(e) {
+    if (Router.getCurrent() !== 'piano') return;
     if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     const key = e.key.toLowerCase();
 
@@ -154,6 +155,7 @@ const Piano = (() => {
   }
 
   function keyupHandler(e) {
+    if (Router.getCurrent() !== 'piano') return;
     const key = e.key.toLowerCase();
     const noteKey = KEY_MAP[key];
     if (!noteKey) return;
