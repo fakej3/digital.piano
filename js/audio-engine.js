@@ -300,7 +300,7 @@ class AudioEngine {
     const harmonics = [0.5, 1, 2, 3, 4, 5, 6, 8, 16];
     const g = ctx.createGain();
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.001, t + 0.003);
+    g.gain.linearRampToValueAtTime(1.0, t + 0.015);
 
     const oscs = drawbars.map((d, i) => {
       if (!d) return null;

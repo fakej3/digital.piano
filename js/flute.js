@@ -81,6 +81,7 @@ const Flute = (() => {
   }
 
   function kbDown(e) {
+    if (Router.getCurrent() !== 'flute') return;
     if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     const idx = KB_KEYS.indexOf(e.key.toLowerCase());
     if (idx < 0) return;
@@ -92,6 +93,7 @@ const Flute = (() => {
   }
 
   function kbUp(e) {
+    if (Router.getCurrent() !== 'flute') return;
     const idx = KB_KEYS.indexOf(e.key.toLowerCase());
     if (idx < 0) return;
     const n = NOTES_ROW1[idx];

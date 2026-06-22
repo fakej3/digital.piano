@@ -122,6 +122,7 @@ const Violin = (() => {
   }
 
   function kbDown(e) {
+    if (Router.getCurrent() !== 'violin') return;
     if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     const key = e.key.toLowerCase();
     const mapped = KB_MAP[key];
@@ -131,6 +132,7 @@ const Violin = (() => {
   }
 
   function kbUp(e) {
+    if (Router.getCurrent() !== 'violin') return;
     const key = e.key.toLowerCase();
     const mapped = KB_MAP[key];
     if (!mapped) return;

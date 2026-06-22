@@ -64,15 +64,25 @@ const BeatMaker = (() => {
     playBtn.addEventListener('click', togglePlay);
     controls.appendChild(playBtn);
 
-    controls.innerHTML += `
-      <div class="bm-bpm-group">
-        <div class="bm-bpm-label">BPM</div>
-        <div class="bm-bpm-wrap">
-          <span class="bm-bpm-val" id="bmBpmVal">${bpm}</span>
-          <input type="range" id="bmBpmSlider" min="60" max="200" value="${bpm}" style="width:140px;accent-color:var(--primary);">
-        </div>
+    const bpmGroup = document.createElement('div');
+    bpmGroup.className = 'bm-bpm-group';
+    bpmGroup.innerHTML = `
+      <div class="bm-bpm-label">BPM</div>
+      <div class="bm-bpm-wrap">
+        <span class="bm-bpm-val" id="bmBpmVal">${bpm}</span>
+        <input type="range" id="bmBpmSlider" min="60" max="200" value="${bpm}" style="width:140px;accent-color:var(--primary);">
       </div>
     `;
+    const bpmSlider = bpmGroup.querySelector('#bmBpmSlider');
+    const bpmVal    = bpmGroup.querySelector('#bmBpmVal');
+    if (bpmSlider) {
+      bpmSlider.addEventListener('input', e => {
+        bpm = parseInt(e.target.value);
+        if (bpmVal) bpmVal.textContent = bpm;
+        if (playing) { stopSequencer(); startSequencer(); }
+      });
+    }
+    controls.appendChild(bpmGroup);
 
     // Preset buttons
     const presetWrap = document.createElement('div');
@@ -135,24 +145,6 @@ const BeatMaker = (() => {
 
     wrap.appendChild(grid);
 
-    // BPM slider event (after DOM insert)
-    setTimeout(() => {
-      const slider = document.getElementById('bmBpmSlider');
-      const val    = document.getElementById('bmBpmVal');
-      if (slider) {
-        slider.addEventListener('input', e => {
-          bpm = parseInt(e.target.value);
-          if (val) val.textContent = bpm;
-          if (playing) { stopSequencer(); startSequencer(); }
-        });
-      }
-    }, 50);
-
-    // Restore play button after innerHTML wipe
-    setTimeout(() => {
-      const pb = document.getElementById('bmPlayBtn');
-      if (pb) pb.addEventListener('click', togglePlay);
-    }, 50);
   }
 
   function tick() {

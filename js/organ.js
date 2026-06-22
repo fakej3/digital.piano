@@ -174,6 +174,7 @@ const Organ = (() => {
   }
 
   function kbDown(e) {
+    if (Router.getCurrent() !== 'organ') return;
     if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     const kn = KEY_MAP[e.key.toLowerCase()];
     if (!kn) return;
@@ -191,6 +192,7 @@ const Organ = (() => {
   }
 
   function kbUp(e) {
+    if (Router.getCurrent() !== 'organ') return;
     const kn = KEY_MAP[e.key.toLowerCase()];
     if (!kn) return;
     const note = kn.replace('+','');

@@ -244,6 +244,7 @@ const Synth = (() => {
   }
 
   function kbDown(e) {
+    if (Router.getCurrent() !== 'synth') return;
     if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     const kv = e.key.toLowerCase();
     if (kv === 'z') { baseOctave = Math.max(1, baseOctave-1); rebuildKeyboard(); document.getElementById('sOctave') && (document.getElementById('sOctave').value = baseOctave); return; }
@@ -265,6 +266,7 @@ const Synth = (() => {
   }
 
   function kbUp(e) {
+    if (Router.getCurrent() !== 'synth') return;
     const kn = KEY_MAP[e.key.toLowerCase()];
     if (!kn) return;
     const note = kn.replace('+','');
