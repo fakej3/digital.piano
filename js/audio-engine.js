@@ -15,6 +15,9 @@ class AudioEngine {
     this._reverb = 0.12;
     this.initialized = false;
     this.activeNotes = new Map();
+    // Polyphony cap: maximum simultaneous voices to prevent CPU spike
+    this._maxVoices = 32;
+    this._voices = []; // [{g, stop}] FIFO list
   }
 
   async init() {
@@ -67,6 +70,27 @@ class AudioEngine {
 
   get out() { return this.compressor; }
   get now() { return this.ctx ? this.ctx.currentTime : 0; }
+
+  // Register a voice for polyphony management; oldest voice killed if over cap
+  _registerVoice(gainNode, stopFn) {
+    this._voices.push({ g: gainNode, stop: stopFn });
+    if (this._voices.length > this._maxVoices) {
+      const oldest = this._voices.shift();
+      try {
+        const t = this.now;
+        oldest.g.gain.cancelScheduledValues(t);
+        oldest.g.gain.setValueAtTime(oldest.g.gain.value, t);
+        oldest.g.gain.linearRampToValueAtTime(0, t + 0.04);
+        if (oldest.stop) oldest.stop(t + 0.05);
+      } catch (_) {}
+    }
+  }
+
+  // Remove a voice from the tracking list when it naturally ends
+  _releaseVoice(gainNode) {
+    const idx = this._voices.findIndex(v => v.g === gainNode);
+    if (idx !== -1) this._voices.splice(idx, 1);
+  }
 
   setVolume(v) {
     this._volume = Math.max(0, Math.min(1, v));
@@ -131,11 +155,19 @@ class AudioEngine {
       o.connect(mg); mg.connect(g);
       o.start(t);
       o.stop(t + dur + 0.5);
+      // Disconnect after stop to free resources
+      o.addEventListener('ended', () => { try { o.disconnect(); mg.disconnect(); } catch(_) {} });
       oscs.push(o);
     });
 
     g.connect(this.out);
-    return { g, oscs, t, dur };
+    const nd = { g, oscs, t, dur };
+    this._registerVoice(g, (stopAt) => oscs.forEach(o => { try { o.stop(stopAt); } catch(_) {} }));
+    // Auto-release tracking when note ends naturally
+    if (!sustain) {
+      setTimeout(() => this._releaseVoice(g), (dur + 0.6) * 1000);
+    }
+    return nd;
   }
 
   stopPiano(nd, release = 0.25) {
@@ -145,19 +177,21 @@ class AudioEngine {
     nd.g.gain.setValueAtTime(nd.g.gain.value, t);
     nd.g.gain.exponentialRampToValueAtTime(0.0001, t + release);
     nd.oscs.forEach(o => { try { o.stop(t + release + 0.02); } catch(_) {} });
+    this._releaseVoice(nd.g);
   }
 
   /* ===== GUITAR / PLUCKED STRING ===== */
   playGuitar(freq, velocity = 0.8, bright = true) {
     const { ctx } = this;
     const t = this.now;
-    const dur = Math.max(1.2, 4.5 - freq / 250);
+    // Longer decay for more realistic guitar sustain
+    const dur = Math.max(1.8, 5.5 - freq / 200);
 
     // Karplus-Strong approximation: burst noise + LP filter + decay
     const N = Math.round(ctx.sampleRate / freq);
-    const excit = ctx.createBuffer(1, N, ctx.sampleRate);
+    const excit = ctx.createBuffer(1, Math.max(N, 1), ctx.sampleRate);
     const ed = excit.getChannelData(0);
-    for (let i = 0; i < N; i++) ed[i] = (Math.random() * 2 - 1) * velocity;
+    for (let i = 0; i < Math.max(N, 1); i++) ed[i] = (Math.random() * 2 - 1) * velocity;
 
     const src = ctx.createBufferSource();
     src.buffer = excit;
@@ -174,6 +208,11 @@ class AudioEngine {
 
     src.connect(flt); flt.connect(g); g.connect(this.out);
     src.start(t); src.stop(t + dur);
+    // Disconnect after stop to free resources
+    src.addEventListener('ended', () => { try { src.disconnect(); flt.disconnect(); g.disconnect(); } catch(_) {} });
+
+    this._registerVoice(g, (stopAt) => { try { src.stop(stopAt); } catch(_) {} });
+    setTimeout(() => this._releaseVoice(g), (dur + 0.2) * 1000);
   }
 
   /* ===== BASS ===== */
@@ -209,6 +248,11 @@ class AudioEngine {
 
     o1.start(t); o1.stop(t + dur);
     o2.start(t); o2.stop(t + dur);
+    o1.addEventListener('ended', () => { try { o1.disconnect(); m1.disconnect(); } catch(_) {} });
+    o2.addEventListener('ended', () => { try { o2.disconnect(); m2.disconnect(); flt.disconnect(); g.disconnect(); } catch(_) {} });
+
+    this._registerVoice(g, (stopAt) => { try { o1.stop(stopAt); o2.stop(stopAt); } catch(_) {} });
+    setTimeout(() => this._releaseVoice(g), (dur + 0.2) * 1000);
   }
 
   /* ===== VIOLIN / BOWED ===== */
@@ -239,7 +283,11 @@ class AudioEngine {
     o.connect(flt); flt.connect(g); g.connect(this.out);
     o.start(t); lfo.start(t);
 
-    return { o, lfo, g };
+    const nd = { o, lfo, flt, g };
+    this._registerVoice(g, (stopAt) => {
+      try { o.stop(stopAt); lfo.stop(stopAt); } catch(_) {}
+    });
+    return nd;
   }
 
   stopViolin(nd, release = 0.12) {
@@ -248,7 +296,13 @@ class AudioEngine {
     nd.g.gain.cancelScheduledValues(t);
     nd.g.gain.setValueAtTime(nd.g.gain.value, t);
     nd.g.gain.linearRampToValueAtTime(0, t + release);
-    try { nd.o.stop(t + release + 0.02); nd.lfo.stop(t + release + 0.02); } catch(_) {}
+    const stopAt = t + release + 0.02;
+    try { nd.o.stop(stopAt); nd.lfo.stop(stopAt); } catch(_) {}
+    // Cleanup after stop
+    setTimeout(() => {
+      try { nd.o.disconnect(); nd.lfo.disconnect(); nd.flt.disconnect(); nd.g.disconnect(); } catch(_) {}
+    }, (release + 0.1) * 1000);
+    this._releaseVoice(nd.g);
   }
 
   /* ===== FLUTE ===== */
@@ -285,7 +339,11 @@ class AudioEngine {
     g.connect(this.out);
 
     o.start(t); lfo.start(t); ns.start(t);
-    return { o, lfo, ns, g };
+    const nd = { o, lfo, ns, nbf, ng, g };
+    this._registerVoice(g, (stopAt) => {
+      try { nd.o.stop(stopAt); nd.lfo.stop(stopAt); nd.ns.stop(stopAt); } catch(_) {}
+    });
+    return nd;
   }
 
   stopFlute(nd, release = 0.1) {
@@ -296,6 +354,10 @@ class AudioEngine {
     nd.g.gain.linearRampToValueAtTime(0, t + release);
     const stop = t + release + 0.02;
     try { nd.o.stop(stop); nd.lfo.stop(stop); nd.ns.stop(stop); } catch(_) {}
+    setTimeout(() => {
+      try { nd.o.disconnect(); nd.lfo.disconnect(); nd.ns.disconnect(); nd.nbf.disconnect(); nd.ng.disconnect(); nd.g.disconnect(); } catch(_) {}
+    }, (release + 0.1) * 1000);
+    this._releaseVoice(nd.g);
   }
 
   /* ===== ORGAN ===== */
@@ -307,6 +369,7 @@ class AudioEngine {
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(1.0, t + 0.015);
 
+    // Map indexed by drawbar position (0-8) so updateOrganDrawbar can address them correctly
     const oscs = drawbars.map((d, i) => {
       if (!d) return null;
       const o = ctx.createOscillator();
@@ -316,11 +379,16 @@ class AudioEngine {
       mg.gain.value = (d / 8) * 0.12;
       o.connect(mg); mg.connect(g);
       o.start(t);
-      return { o, mg };
-    }).filter(Boolean);
+      return { o, mg, drawbarIdx: i };
+    });
+    // Keep sparse array (null entries) so index === drawbar slot
 
     g.connect(this.out);
-    return { oscs, g };
+    const nd = { oscs, g };
+    this._registerVoice(g, (stopAt) => {
+      nd.oscs.forEach(x => { if (x) try { x.o.stop(stopAt); } catch(_) {} });
+    });
+    return nd;
   }
 
   stopOrgan(nd, release = 0.015) {
@@ -329,10 +397,17 @@ class AudioEngine {
     nd.g.gain.cancelScheduledValues(t);
     nd.g.gain.setValueAtTime(nd.g.gain.value, t);
     nd.g.gain.linearRampToValueAtTime(0, t + release);
-    nd.oscs.forEach(x => { try { x.o.stop(t + release + 0.01); } catch(_) {} });
+    const stopAt = t + release + 0.01;
+    nd.oscs.forEach(x => { if (x) try { x.o.stop(stopAt); } catch(_) {} });
+    setTimeout(() => {
+      nd.oscs.forEach(x => { if (x) try { x.o.disconnect(); x.mg.disconnect(); } catch(_) {} });
+      try { nd.g.disconnect(); } catch(_) {}
+    }, (release + 0.1) * 1000);
+    this._releaseVoice(nd.g);
   }
 
   updateOrganDrawbar(nd, harmonicIdx, value) {
+    // oscs is a sparse array indexed by drawbar slot
     if (!nd || !nd.oscs[harmonicIdx]) return;
     nd.oscs[harmonicIdx].mg.gain.setTargetAtTime((value / 8) * 0.12, this.now, 0.02);
   }
@@ -377,7 +452,12 @@ class AudioEngine {
     o.connect(flt); flt.connect(g); g.connect(this.out);
     o.start(t);
 
-    return { o, lfo, flt, g, opts };
+    const nd = { o, lfo, lfog, flt, g, opts };
+    this._registerVoice(g, (stopAt) => {
+      try { o.stop(stopAt); } catch(_) {}
+      if (lfo) try { lfo.stop(stopAt); } catch(_) {}
+    });
+    return nd;
   }
 
   stopSynth(nd) {
@@ -387,8 +467,14 @@ class AudioEngine {
     nd.g.gain.cancelScheduledValues(t);
     nd.g.gain.setValueAtTime(nd.g.gain.value, t);
     nd.g.gain.linearRampToValueAtTime(0, t + rel);
-    try { nd.o.stop(t + rel + 0.02); } catch(_) {}
-    if (nd.lfo) try { nd.lfo.stop(t + rel + 0.02); } catch(_) {}
+    const stopAt = t + rel + 0.02;
+    try { nd.o.stop(stopAt); } catch(_) {}
+    if (nd.lfo) try { nd.lfo.stop(stopAt); } catch(_) {}
+    setTimeout(() => {
+      try { nd.o.disconnect(); nd.flt.disconnect(); nd.g.disconnect(); } catch(_) {}
+      if (nd.lfo) try { nd.lfo.disconnect(); if (nd.lfog) nd.lfog.disconnect(); } catch(_) {}
+    }, (rel + 0.1) * 1000);
+    this._releaseVoice(nd.g);
   }
 
   /* ===== MALLET (XYLOPHONE / MARIMBA) ===== */
@@ -415,6 +501,13 @@ class AudioEngine {
 
     o1.start(t); o1.stop(t + dur + 0.1);
     o2.start(t); o2.stop(t + dur * 0.6);
+    o1.addEventListener('ended', () => { try { o1.disconnect(); g1.disconnect(); } catch(_) {} });
+    o2.addEventListener('ended', () => { try { o2.disconnect(); g2.disconnect(); g.disconnect(); } catch(_) {} });
+
+    this._registerVoice(g, (stopAt) => {
+      try { o1.stop(stopAt); o2.stop(stopAt); } catch(_) {}
+    });
+    setTimeout(() => this._releaseVoice(g), (dur + 0.2) * 1000);
   }
 
   /* ===== DRUMS ===== */

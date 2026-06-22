@@ -79,22 +79,36 @@ const Piano = (() => {
       if (!key) return;
       e.preventDefault();
       audioEngine.init().then(() => playKey(key, 0.8));
-      key.setPointerCapture(e.pointerId);
+      // Capture on the container so pointermove fires even if finger slides
+      container.setPointerCapture(e.pointerId);
     });
 
     container.addEventListener('pointerup', e => {
-      const key = e.target.closest('.piano-key');
-      if (!key) return;
-      stopKey(key);
+      // Stop any key that was being held
+      container.querySelectorAll('.piano-key.pressed').forEach(k => stopKey(k));
     });
 
     container.addEventListener('pointerleave', e => {
-      const key = e.target.closest('.piano-key');
-      if (key) stopKey(key);
-    }, true);
+      // pointerleave fires when pointer leaves the entire container
+      container.querySelectorAll('.piano-key.pressed').forEach(k => stopKey(k));
+    });
+
+    container.addEventListener('pointercancel', () => {
+      container.querySelectorAll('.piano-key.pressed').forEach(k => stopKey(k));
+    });
 
     container.addEventListener('pointermove', e => {
-      // slide play
+      // Slide-play: play the key currently under the pointer while held
+      if (e.buttons === 0) return;
+      const key = document.elementFromPoint(e.clientX, e.clientY)?.closest('.piano-key');
+      if (!key) return;
+      // Stop any key not under pointer
+      container.querySelectorAll('.piano-key.pressed').forEach(k => {
+        if (k !== key) stopKey(k);
+      });
+      if (!activeNotes[key.dataset.note + key.dataset.octave]) {
+        playKey(key, 0.7);
+      }
     });
   }
 
@@ -222,11 +236,16 @@ const Piano = (() => {
   }
 
   function destroy() {
+    // Stop all active and sustained notes to prevent stuck audio
+    Object.values(activeNotes).forEach(nd => audioEngine.stopPiano(nd));
+    activeNotes = {};
+    stopSustained();
     document.removeEventListener('keydown', keyboardHandler);
     document.removeEventListener('keyup', keyupHandler);
     if (waveViz) { waveViz.stop(); waveViz = null; }
     if (sessionStart) {
       Storage.addInstrumentTime('piano', (Date.now() - sessionStart) / 1000);
+      sessionStart = null;
     }
     initialized = false;
   }
