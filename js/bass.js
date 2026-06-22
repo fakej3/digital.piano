@@ -1,6 +1,12 @@
 /* ===================================================
    InstrumentVerse — bass.js
    Bass guitar fretboard (E1 A1 D2 G2 standard tuning)
+   Features:
+     - Tap a fret cell to pluck a note (1.5-2s sustain via playBass)
+     - Swipe horizontally across a string row = slide technique (pitch bend)
+     - Keyboard: 1-4 = open strings (E A D G)
+                 Q W E R = frets 1-4 on the currently-focused string
+                 [ / ] = move focused string down / up
    =================================================== */
 
 const Bass = (() => {
@@ -8,12 +14,13 @@ const Bass = (() => {
   const STRING_NAMES = ['E', 'A', 'D', 'G'];
   const FRET_COUNT = 12;
   let initialized = false;
+  let focusString = 0; // which string the QWER fret keys target
 
   const NOTE_NAMES = ['E','F','F#','G','G#','A','A#','B','C','C#','D','D#'];
-  const BASS_RIFFS = {
-    'C walk': [[0,3],[0,1],[1,3],[0,3]],  // simple C walk
-    'Blues':  [[0,0],[0,3],[1,0],[1,3]],
-  };
+
+  // Keyboard: open strings 1-4, frets Q W E R on focused string
+  const OPEN_KEYS = { '1':0, '2':1, '3':2, '4':3 };
+  const FRET_KEYS = { 'q':1, 'w':2, 'e':3, 'r':4 };
 
   function fretFreq(si, fret) {
     return OPEN_FREQS[si] * Math.pow(2, fret / 12);
@@ -23,6 +30,35 @@ const Bass = (() => {
     const baseNotes = ['E','A','D','G'];
     const baseIdx   = NOTE_NAMES.indexOf(baseNotes[si]);
     return NOTE_NAMES[(baseIdx + fret) % 12];
+  }
+
+  function pluck(si, fret, slideTo = null) {
+    audioEngine.init().then(() => {
+      audioEngine.playBass(fretFreq(si, fret), 0.85, slideTo);
+      flashCell(si, fret);
+      Storage.incrementNotes();
+      Storage.addXP(1);
+      UI.updateXPDisplay();
+    });
+  }
+
+  function flashCell(si, fret) {
+    const cell = document.querySelector(`#bassFretboard [data-string="${si}"][data-fret="${fret}"]`);
+    if (!cell) return;
+    const dot = cell.querySelector('.fret-dot');
+    if (dot) {
+      dot.classList.add('active');
+      setTimeout(() => dot.classList.remove('active'), 600);
+    }
+  }
+
+  function setFocusString(si) {
+    focusString = Math.max(0, Math.min(STRING_NAMES.length - 1, si));
+    document.querySelectorAll('#bassFretboard .string-row').forEach((row, i) => {
+      // string rows are offset by the numRow at index 0
+      const name = row.querySelector('.string-name');
+      if (name) name.style.color = (parseInt(row.dataset.string) === focusString) ? 'var(--primary-lt)' : '';
+    });
   }
 
   function build() {
@@ -44,6 +80,7 @@ const Bass = (() => {
     STRING_NAMES.forEach((name, si) => {
       const row = document.createElement('div');
       row.className = 'string-row';
+      row.dataset.string = si;
 
       // Thicker strings for bass visual
       const thickness = [4, 3.5, 3, 2.5][si];
@@ -58,7 +95,8 @@ const Bass = (() => {
         const cell = document.createElement('div');
         cell.className = 'fret-cell';
         cell.style.height = '56px';
-        const freq = fretFreq(si, f);
+        cell.dataset.string = si;
+        cell.dataset.fret   = f;
         const noteName = getNoteName(si, f);
 
         const dot = document.createElement('div');
@@ -71,24 +109,9 @@ const Bass = (() => {
           dot.style.color = 'var(--primary-lt)';
         }
         cell.appendChild(dot);
-
-        cell.addEventListener('pointerdown', e => {
-          e.preventDefault();
-          audioEngine.init().then(() => {
-            audioEngine.playBass(freq, 0.85);
-            dot.classList.add('active');
-            setTimeout(() => dot.classList.remove('active'), 600);
-            Storage.incrementNotes();
-            Storage.addXP(1);
-            UI.updateXPDisplay();
-          });
-        });
-        // Clear active state if touch is cancelled mid-gesture
-        cell.addEventListener('pointercancel', () => {
-          dot.classList.remove('active');
-        });
         row.appendChild(cell);
       }
+      attachStringGestures(row, si);
       fb.appendChild(row);
     });
 
@@ -109,15 +132,91 @@ const Bass = (() => {
       markerRow.appendChild(m);
     }
     fb.appendChild(markerRow);
+
+    setFocusString(0);
+
+    // Hint
+    const hint = document.createElement('div');
+    hint.style.cssText = 'margin-top:14px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:0.82rem;color:var(--text-muted);';
+    hint.innerHTML = `
+      <strong style="color:var(--text)">Play</strong> &nbsp;Tap a fret to pluck · swipe across a string to <em>slide</em> between notes.<br>
+      <strong style="color:var(--text)">Keyboard</strong> &nbsp;<kbd>1</kbd>–<kbd>4</kbd> open strings (E A D G) · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd> frets 1–4 · <kbd>[</kbd> <kbd>]</kbd> change active string.
+    `;
+    fb.appendChild(hint);
+  }
+
+  /* ===== SLIDE GESTURE (swipe horizontally across a string) ===== */
+  function attachStringGestures(row, si) {
+    let start = null;   // { x, fret }
+    let didSlide = false;
+
+    row.addEventListener('pointerdown', e => {
+      const cell = e.target.closest('.fret-cell');
+      if (!cell) return;
+      e.preventDefault();
+      const fret = parseInt(cell.dataset.fret);
+      start = { x: e.clientX, fret };
+      didSlide = false;
+      focusString = si;
+      setFocusString(si);
+      try { row.setPointerCapture(e.pointerId); } catch (_) {}
+    }, { passive: false });
+
+    row.addEventListener('pointermove', e => {
+      if (!start || didSlide) return;
+      const dx = e.clientX - start.x;
+      // Slide if dragged across roughly one fret-cell width or more
+      const cellW = (row.querySelector('.fret-cell')?.offsetWidth || 40);
+      if (Math.abs(dx) >= cellW * 0.9) {
+        const targetCell = document.elementFromPoint(e.clientX, e.clientY)?.closest('.fret-cell');
+        let targetFret = start.fret + Math.round(dx / cellW);
+        if (targetCell && targetCell.dataset.string == si) targetFret = parseInt(targetCell.dataset.fret);
+        targetFret = Math.max(0, Math.min(FRET_COUNT, targetFret));
+        if (targetFret !== start.fret) {
+          didSlide = true;
+          pluck(si, start.fret, fretFreq(si, targetFret)); // slide from start to target
+          flashCell(si, targetFret);
+        }
+      }
+    }, { passive: false });
+
+    const finish = e => {
+      if (start && !didSlide) {
+        // No slide — a plain pluck of the pressed fret
+        pluck(si, start.fret);
+      }
+      start = null;
+      didSlide = false;
+    };
+    row.addEventListener('pointerup', finish);
+    row.addEventListener('pointercancel', () => {
+      row.querySelectorAll('.fret-dot.active').forEach(d => d.classList.remove('active'));
+      start = null; didSlide = false;
+    });
+  }
+
+  /* ===== KEYBOARD ===== */
+  function kbDown(e) {
+    if (Router.getCurrent() !== 'bass') return;
+    if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    const k = e.key.toLowerCase();
+    if (k === '[') { setFocusString(focusString - 1); return; }
+    if (k === ']') { setFocusString(focusString + 1); return; }
+    if (k in OPEN_KEYS) { pluck(OPEN_KEYS[k], 0); return; }
+    if (k in FRET_KEYS) { pluck(focusString, FRET_KEYS[k]); return; }
   }
 
   function init() {
     if (initialized) return;
     initialized = true;
     build();
+    document.addEventListener('keydown', kbDown);
   }
 
-  function destroy() { initialized = false; }
+  function destroy() {
+    document.removeEventListener('keydown', kbDown);
+    initialized = false;
+  }
 
   return { init, destroy };
 })();

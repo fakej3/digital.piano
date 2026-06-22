@@ -216,7 +216,20 @@ class AudioEngine {
   }
 
   /* ===== BASS ===== */
-  playBass(freq, velocity = 0.8) {
+  // Cached waveshaper curve for tube-style saturation (built once)
+  _bassCurve() {
+    if (this.__bassCurve) return this.__bassCurve;
+    const n = 1024, curve = new Float32Array(n), k = 2.2;
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * 2 - 1;
+      curve[i] = ((1 + k) * x) / (1 + k * Math.abs(x)); // soft clip
+    }
+    this.__bassCurve = curve;
+    return curve;
+  }
+
+  // slideTo: optional target frequency for a portamento/slide between two notes
+  playBass(freq, velocity = 0.8, slideTo = null) {
     const { ctx } = this;
     const t = this.now;
     const dur = 2.8;
@@ -225,8 +238,13 @@ class AudioEngine {
     const o2 = ctx.createOscillator();
     o1.type = 'sawtooth';
     o2.type = 'square';
-    o1.frequency.value = freq;
-    o2.frequency.value = freq;
+    o1.frequency.setValueAtTime(freq, t);
+    o2.frequency.setValueAtTime(freq, t);
+    if (slideTo && slideTo > 0) {
+      // Glide both oscillators to the target pitch over ~0.28s (slide technique)
+      o1.frequency.exponentialRampToValueAtTime(slideTo, t + 0.28);
+      o2.frequency.exponentialRampToValueAtTime(slideTo, t + 0.28);
+    }
 
     const flt = ctx.createBiquadFilter();
     flt.type = 'lowpass';
@@ -234,22 +252,27 @@ class AudioEngine {
     flt.frequency.exponentialRampToValueAtTime(freq * 2, t + 0.3);
     flt.Q.value = 2;
 
+    // Tube saturation
+    const shaper = ctx.createWaveShaper();
+    shaper.curve = this._bassCurve();
+    shaper.oversample = '2x';
+
     const m1 = ctx.createGain(); m1.gain.value = 0.65;
     const m2 = ctx.createGain(); m2.gain.value = 0.35;
     const g  = ctx.createGain();
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(velocity * 0.75, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(velocity * 0.4, t + 0.18);
+    g.gain.linearRampToValueAtTime(velocity * 0.7, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(velocity * 0.38, t + 0.18);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
     o1.connect(m1); m1.connect(flt);
     o2.connect(m2); m2.connect(flt);
-    flt.connect(g); g.connect(this.out);
+    flt.connect(shaper); shaper.connect(g); g.connect(this.out);
 
     o1.start(t); o1.stop(t + dur);
     o2.start(t); o2.stop(t + dur);
     o1.addEventListener('ended', () => { try { o1.disconnect(); m1.disconnect(); } catch(_) {} });
-    o2.addEventListener('ended', () => { try { o2.disconnect(); m2.disconnect(); flt.disconnect(); g.disconnect(); } catch(_) {} });
+    o2.addEventListener('ended', () => { try { o2.disconnect(); m2.disconnect(); flt.disconnect(); shaper.disconnect(); g.disconnect(); } catch(_) {} });
 
     this._registerVoice(g, (stopAt) => { try { o1.stop(stopAt); o2.stop(stopAt); } catch(_) {} });
     setTimeout(() => this._releaseVoice(g), (dur + 0.2) * 1000);

@@ -26,6 +26,8 @@ const BeatMaker = (() => {
   let initialized = false;
   // Mute state per track
   let mutedTracks = new Set();
+  // Presets the user has loaded (for the Beat Master achievement)
+  let loadedPresets = new Set();
 
   const PRESETS = {
     'Basic Rock': {
@@ -247,6 +249,12 @@ const BeatMaker = (() => {
     UI.toast('Loaded: ' + name);
     Storage.addXP(5);
     UI.updateXPDisplay();
+
+    // Track which presets have been loaded; unlock Beat Master when all are tried
+    loadedPresets.add(name);
+    if (loadedPresets.size >= Object.keys(PRESETS).length) {
+      if (Storage.unlockAchievement('beat_master')) UI.showAchievement('Beat Master', '🎚️');
+    }
   }
 
   function init() {

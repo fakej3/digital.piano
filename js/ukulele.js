@@ -184,18 +184,62 @@ const Ukulele = (() => {
     });
   }
 
+  /* ===== DEDICATED STRUM BAR ===== */
+  let barStart = null;
+  let barStrummed = false;
+
+  function showStrumDirection(dir) {
+    const bar = document.getElementById('ukuleleStrumBar');
+    if (!bar) return;
+    const ind = document.createElement('span');
+    ind.className = 'strum-indicator';
+    ind.textContent = dir === 'down' ? '↓' : '↑';
+    bar.appendChild(ind);
+    setTimeout(() => ind.remove(), 500);
+  }
+
+  function barStrum(dir) {
+    if (!currentChord) { UI.toast('Pick a chord first'); return; }
+    audioEngine.init().then(() => strumChord(CHORDS[currentChord], dir));
+    showStrumDirection(dir);
+  }
+
+  function initStrumBar() {
+    const bar = document.getElementById('ukuleleStrumBar');
+    if (!bar) return;
+    bar.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      barStart = { y: e.clientY };
+      barStrummed = false;
+      try { bar.setPointerCapture(e.pointerId); } catch (_) {}
+    }, { passive: false });
+    bar.addEventListener('pointermove', e => {
+      if (!barStart || barStrummed) return;
+      const dy = e.clientY - barStart.y;
+      if (Math.abs(dy) > 16) { barStrummed = true; barStrum(dy > 0 ? 'down' : 'up'); }
+    }, { passive: false });
+    bar.addEventListener('pointerup', () => {
+      if (barStart && !barStrummed) barStrum('down');
+      barStart = null; barStrummed = false;
+    });
+    bar.addEventListener('pointercancel', () => { barStart = null; barStrummed = false; });
+  }
+
   function init() {
     if (initialized) return;
     initialized = true;
     buildChordGrid();
     buildNeck(null);
     initSwipe();
+    initStrumBar();
   }
 
   function destroy() {
     currentChord = null;
     swipeStart   = null;
     swipeMoved   = false;
+    barStart     = null;
+    barStrummed  = false;
     initialized  = false;
   }
 

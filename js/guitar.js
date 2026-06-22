@@ -298,6 +298,55 @@ const Guitar = (() => {
     });
   }
 
+  /* ===== DEDICATED STRUM BAR ===== */
+  // Touch-friendly strip below the neck. Swipe down = downstroke, up = upstroke,
+  // tap = downstroke. Re-plays all strings of the selected chord with per-string delay.
+  let barStart = null;
+  let barStrummed = false;
+
+  function showStrumDirection(dir) {
+    const bar = document.getElementById('guitarStrumBar');
+    if (!bar) return;
+    const ind = document.createElement('span');
+    ind.className = 'strum-indicator';
+    ind.textContent = dir === 'down' ? '↓' : '↑';
+    bar.appendChild(ind);
+    setTimeout(() => ind.remove(), 500);
+  }
+
+  function barStrum(dir) {
+    if (!currentChord) { UI.toast('Pick a chord first'); return; }
+    audioEngine.init().then(() => strumChord(CHORDS[currentChord], dir));
+    showStrumDirection(dir);
+  }
+
+  function initStrumBar() {
+    const bar = document.getElementById('guitarStrumBar');
+    if (!bar) return;
+
+    bar.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      barStart = { y: e.clientY };
+      barStrummed = false;
+      try { bar.setPointerCapture(e.pointerId); } catch (_) {}
+    }, { passive: false });
+
+    bar.addEventListener('pointermove', e => {
+      if (!barStart || barStrummed) return;
+      const dy = e.clientY - barStart.y;
+      if (Math.abs(dy) > 18) {
+        barStrummed = true;
+        barStrum(dy > 0 ? 'down' : 'up');
+      }
+    }, { passive: false });
+
+    bar.addEventListener('pointerup', () => {
+      if (barStart && !barStrummed) barStrum('down'); // plain tap = downstroke
+      barStart = null; barStrummed = false;
+    });
+    bar.addEventListener('pointercancel', () => { barStart = null; barStrummed = false; });
+  }
+
   /* ===== SWIPE TO STRUM (Fretboard mode) ===== */
   let fbSwipeStart = null;
   let fbSwipeMoved = false;
@@ -369,6 +418,7 @@ const Guitar = (() => {
     buildChordUI();
     buildFretboard();
     initStrumGesture();
+    initStrumBar();
     initFretboardSwipe();
 
     // Mode toggle
@@ -394,6 +444,8 @@ const Guitar = (() => {
     currentChord = null;
     strumStart   = null;
     strumMoved   = false;
+    barStart     = null;
+    barStrummed  = false;
     fbSwipeStart = null;
     fbSwipeMoved = false;
     initialized  = false;

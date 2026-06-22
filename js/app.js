@@ -328,9 +328,8 @@ const App = (() => {
     volSlider?.addEventListener('input', e => {
       const v = parseInt(e.target.value) / 100;
       volVal.textContent = e.target.value + '%';
-      if (audioEngine.masterGain && audioEngine.ctx) {
-        audioEngine.masterGain.gain.setTargetAtTime(v, audioEngine.ctx.currentTime, 0.05);
-      }
+      // Route through the engine API (also updates the cached default if ctx not yet built)
+      audioEngine.setVolume(v);
       Storage.saveSetting('volume', v);
     });
 
@@ -339,10 +338,7 @@ const App = (() => {
     revSlider?.addEventListener('input', e => {
       const v = parseInt(e.target.value) / 100;
       revVal.textContent = e.target.value + '%';
-      if (audioEngine.ctx) {
-        if (audioEngine.wetGain) audioEngine.wetGain.gain.setTargetAtTime(v * 0.4, audioEngine.ctx.currentTime, 0.05);
-        if (audioEngine.dryGain) audioEngine.dryGain.gain.setTargetAtTime(1 - v * 0.3, audioEngine.ctx.currentTime, 0.05);
-      }
+      audioEngine.setReverb(v);
       Storage.saveSetting('reverb', v);
     });
 
@@ -377,12 +373,23 @@ const App = (() => {
     if (!visited.includes(id)) {
       visited.push(id);
       Storage.set('visited_instruments', visited);
-      if (visited.length >= 12) Storage.unlockAchievement('all_instruments');
+      if (visited.length >= 5  && Storage.unlockAchievement('five_instruments')) UI.showAchievement('Melody Maker', '🎶');
+      if (visited.length >= 12 && Storage.unlockAchievement('all_instruments'))  UI.showAchievement('Instrumentalist', '🎼');
     }
 
     const r = Storage.addXP(2);
     UI.updateXPDisplay();
     if (r.leveledUp) UI.showLevelUp(r.level);
+    checkProgressAchievements();
+  }
+
+  // Unlock level/streak/lesson milestone achievements wherever progress changes
+  function checkProgressAchievements() {
+    const p = Storage.getProgress();
+    if (p.level >= 5  && Storage.unlockAchievement('level5'))  UI.showAchievement('Rising Star', '⭐');
+    if (p.level >= 10 && Storage.unlockAchievement('level10')) UI.showAchievement('Virtuoso', '🌟');
+    if ((p.streak || 0) >= 7 && Storage.unlockAchievement('streak7')) UI.showAchievement('Week Streak', '🔥');
+    if ((p.lessonsCompleted || []).length >= 10 && Storage.unlockAchievement('ten_lessons')) UI.showAchievement('Student', '📖');
   }
 
   // ── Page flash transition ──────────────────────────────────────────────────
@@ -432,12 +439,25 @@ const App = (() => {
 
     // Stop active notes and remove keyboard handlers when leaving an instrument page
     const cleanupMap = {
-      piano:    () => { if (typeof Piano  !== 'undefined') Piano.destroy();  },
-      synth:    () => { if (typeof Synth  !== 'undefined') Synth.destroy();  },
-      organ:    () => { if (typeof Organ  !== 'undefined') Organ.destroy();  },
-      violin:   () => { if (typeof Violin !== 'undefined') Violin.destroy(); },
-      flute:    () => { if (typeof Flute  !== 'undefined') Flute.destroy();  },
-      drums:    () => { if (typeof Drums  !== 'undefined') Drums.destroy();  },
+      piano:     () => { if (typeof Piano     !== 'undefined') Piano.destroy();     },
+      synth:     () => { if (typeof Synth     !== 'undefined') Synth.destroy();     },
+      organ:     () => { if (typeof Organ     !== 'undefined') Organ.destroy();     },
+      violin:    () => { if (typeof Violin    !== 'undefined') Violin.destroy();    },
+      flute:     () => { if (typeof Flute     !== 'undefined') Flute.destroy();     },
+      drums:     () => { if (typeof Drums     !== 'undefined') Drums.destroy();     },
+      guitar:    () => { if (typeof Guitar    !== 'undefined') Guitar.destroy();    },
+      ukulele:   () => { if (typeof Ukulele   !== 'undefined') Ukulele.destroy();   },
+      bass:      () => { if (typeof Bass      !== 'undefined') Bass.destroy();      },
+      xylophone: () => { if (typeof Xylophone !== 'undefined') Xylophone.destroy(); },
+      marimba:   () => { if (typeof Marimba   !== 'undefined') Marimba.destroy();   },
+      // Beat Maker must stop its sequencer cleanly when navigating away
+      beatmaker: () => { if (typeof BeatMaker !== 'undefined') BeatMaker.destroy(); },
+      // Studio tools: stop metronome ticking, release tuner mic, stop recorder
+      studio:    () => {
+        if (typeof Metronome !== 'undefined') Metronome.destroy();
+        if (typeof Tuner     !== 'undefined') Tuner.destroy();
+        if (typeof Recorder  !== 'undefined') Recorder.destroy();
+      },
     };
     let prevPage = null;
     Router.onChange(page => {
@@ -508,6 +528,31 @@ const App = (() => {
     const s = Storage.getSettings();
     if (s.showKeyLabels === false)    document.body.classList.add('hide-key-labels');
     if (s.animationsEnabled === false) document.body.classList.add('reduce-motion');
+    // Seed engine defaults from saved settings so they apply the moment audio starts
+    if (typeof s.volume === 'number') audioEngine._volume = s.volume;
+    if (typeof s.reverb === 'number') audioEngine._reverb = s.reverb;
+  }
+
+  // ── AudioContext unlock ─────────────────────────────────────────────────────
+  // Browsers require a user gesture to start audio. Init the engine on the very
+  // first interaction anywhere (any page), then apply saved volume/reverb.
+  function setupAudioUnlock() {
+    let unlocked = false;
+    const unlock = () => {
+      if (unlocked) return;
+      unlocked = true;
+      audioEngine.init().then(() => {
+        const s = Storage.getSettings();
+        if (typeof s.volume === 'number') audioEngine.setVolume(s.volume);
+        if (typeof s.reverb === 'number') audioEngine.setReverb(s.reverb);
+      });
+      document.removeEventListener('pointerdown', unlock);
+      document.removeEventListener('keydown', unlock);
+      document.removeEventListener('touchstart', unlock);
+    };
+    document.addEventListener('pointerdown', unlock, { passive: true });
+    document.addEventListener('keydown', unlock);
+    document.addEventListener('touchstart', unlock, { passive: true });
   }
 
   // ── Global keyboard shortcuts ──────────────────────────────────────────────
@@ -526,6 +571,7 @@ const App = (() => {
     await runLoadingScreen();
 
     applySettings();
+    setupAudioUnlock();
     setupMobileNav();
     setupGlobalKeys();
     setupRoutes();
@@ -537,7 +583,7 @@ const App = (() => {
     Router.init();
   }
 
-  return { init };
+  return { init, checkProgressAchievements };
 })();
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────

@@ -1107,3 +1107,79 @@
 
   .flute-key { width: 60px; height: 80px; }
 }
+
+/* ===== STRUM BAR (guitar / ukulele) ===== */
+.strum-bar {
+  position: relative;
+  height: 56px;
+  width: 100%;
+  margin-top: 14px;
+  border-radius: var(--radius-lg, 12px);
+  background: linear-gradient(180deg, rgba(40,30,20,0.9), rgba(22,16,10,0.95));
+  border: 1px solid var(--border-lg, rgba(255,255,255,0.12));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 8px rgba(0,0,0,0.3);
+}
+.strum-bar:active { filter: brightness(1.15); }
+.strum-bar::before,
+.strum-bar::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+}
+.strum-bar::before { top: 38%; }
+.strum-bar::after  { top: 62%; }
+.strum-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+.strum-indicator {
+  position: absolute;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--primary-lt, #a78bfa);
+  text-shadow: 0 0 12px var(--primary-glow, rgba(124,95,230,0.6));
+  pointer-events: none;
+  animation: strumInd 0.5s ease-out forwards;
+}
+@keyframes strumInd {
+  from { opacity: 1; transform: scale(0.7); }
+  to   { opacity: 0; transform: scale(1.4); }
+}
+
+/* ===== PHASE 5 — MOBILE TOUCH QA ===== */
+/* Prevent scroll/zoom hijack on every interactive play surface */
+.piano-keyboard, .organ-keyboard, #drumsKit,
+.guitar-neck, .ukulele-neck, .fretboard, #guitarFretboard, #bassFretboard,
+.mallet-instrument, .flute-keyboard, .flute-row,
+.violin-strings, .strum-bar {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Minimum 44px touch targets for small interactive elements */
+.fret-cell, .drum-pad, .chord-btn,
+.bm-step, .flute-key, .violin-key,
+.mallet-bar {
+  min-height: 44px;
+}
+.chord-btn, .bm-step, .violin-key { min-width: 44px; }
+
+@media (max-width: 480px) {
+  .strum-bar { height: 64px; }
+  .strum-label { font-size: 0.95rem; }
+}

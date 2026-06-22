@@ -101,6 +101,7 @@ const Recorder = (() => {
 
       Storage.addXP(10);
       UI.updateXPDisplay();
+      if (Storage.unlockAchievement('recorder_used')) UI.showAchievement('Studio Time', '⏺');
       UI.toast('Recording started…');
     } catch(e) {
       UI.toast('Microphone access denied', 'error');

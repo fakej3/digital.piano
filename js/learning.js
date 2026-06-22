@@ -721,6 +721,7 @@ const Learning = (() => {
           completeBtn.textContent = '✓ Completed!';
           completeBtn.disabled = true;
           Storage.unlockAchievement('first_lesson') && UI.showAchievement('First Lesson!', '📚');
+          if (typeof App !== 'undefined' && App.checkProgressAchievements) App.checkProgressAchievements();
         }
       });
     }
@@ -736,6 +737,7 @@ const Learning = (() => {
   function buildFeaturedLessons() {
     const wrap = document.getElementById('featuredLessons');
     if (!wrap) return;
+    wrap.innerHTML = ''; // clear to avoid duplicate cards on revisit
 
     const featured = [
       { ...LESSONS.piano.beginner[0], level:'beginner' },
@@ -772,5 +774,5 @@ const Learning = (() => {
     buildLearnPage();
   }
 
-  return { init, initLearnPage, LESSONS };
+  return { init, initLearnPage, buildLearnPage, buildFeaturedLessons, openLesson, LESSONS };
 })();
