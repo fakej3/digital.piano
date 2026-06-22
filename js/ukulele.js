@@ -103,12 +103,27 @@ const Ukulele = (() => {
       const freq = fretFreq(si, fret);
       if (!freq) return;
       setTimeout(() => {
-        audioEngine.init().then(() => audioEngine.playGuitar(freq, 0.65, false));
+        audioEngine.init().then(() => {
+          audioEngine.playGuitar(freq, 0.65, false);
+          vibrateString(si);
+        });
       }, si * delay);
     });
     Storage.incrementNotes(4);
     Storage.addXP(1);
     UI.updateXPDisplay();
+  }
+
+  function vibrateString(si) {
+    const neck = document.getElementById('ukuleleNeck');
+    if (!neck) return;
+    const rows = neck.querySelectorAll('.string-row');
+    const row = rows[si + 1]; // +1 for fret number row
+    if (!row) return;
+    const line = row.querySelector('.string-line');
+    if (!line) return;
+    line.classList.add('vibrating');
+    setTimeout(() => line.classList.remove('vibrating'), 700);
   }
 
   // Swipe to strum

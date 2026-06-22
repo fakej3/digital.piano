@@ -64,6 +64,10 @@ const Drums = (() => {
     const el = document.getElementById('pad-' + pad.id);
     if (el) {
       el.classList.add('hit');
+      const shock = document.createElement('div');
+      shock.className = 'drum-shockwave';
+      el.appendChild(shock);
+      shock.addEventListener('animationend', () => shock.remove());
       setTimeout(() => el.classList.remove('hit'), 120);
     }
 

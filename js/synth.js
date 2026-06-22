@@ -20,6 +20,7 @@ const Synth = (() => {
   let activeNotes  = {};
   let baseOctave   = 4;
   let initialized  = false;
+  let waveViz      = null;
 
   function build() {
     const wrap = document.getElementById('synthWrap');
@@ -196,7 +197,7 @@ const Synth = (() => {
         const id      = note + oct;
 
         const key = document.createElement('div');
-        key.className = `piano-key ${isBlack ? 'black' : 'white'}`;
+        key.className = `piano-key synth-key ${isBlack ? 'black' : 'white'}`;
         key.dataset.id   = id;
         key.dataset.freq = freq;
         key.innerHTML    = `<span class="key-label">${note}</span>`;
@@ -227,7 +228,7 @@ const Synth = (() => {
     // Final C
     const finalFreq = audioEngine.noteToFreq('C', baseOctave + 2);
     const finalKey  = document.createElement('div');
-    finalKey.className = 'piano-key white';
+    finalKey.className = 'piano-key synth-key white';
     finalKey.innerHTML = `<span class="key-label">C</span>`;
     finalKey.addEventListener('pointerdown', e => { e.preventDefault(); audioEngine.init().then(() => { const nd = audioEngine.playSynth(finalFreq, params); activeNotes['Cfinal'] = nd; finalKey.classList.add('pressed'); }); });
     finalKey.addEventListener('pointerup', () => { audioEngine.stopSynth(activeNotes['Cfinal']); delete activeNotes['Cfinal']; finalKey.classList.remove('pressed'); });
@@ -286,6 +287,12 @@ const Synth = (() => {
     build();
     document.addEventListener('keydown', kbDown);
     document.addEventListener('keyup',   kbUp);
+
+    const canvas = document.getElementById('synthVizCanvas');
+    if (canvas) {
+      waveViz = UI.createWaveformViz(canvas, '#f472b6');
+      waveViz.start();
+    }
   }
 
   function destroy() {
@@ -293,6 +300,7 @@ const Synth = (() => {
     activeNotes = {};
     document.removeEventListener('keydown', kbDown);
     document.removeEventListener('keyup',   kbUp);
+    if (waveViz) { waveViz.stop(); waveViz = null; }
     initialized = false;
   }
 

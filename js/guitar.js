@@ -131,10 +131,23 @@ const Guitar = (() => {
         audioEngine.init().then(() => {
           audioEngine.playGuitar(freq, 0.75);
           highlightNeckString(si, fret);
+          vibrateString(si, 'guitarNeck');
         });
       }, i * delay);
     });
     Storage.incrementNotes(6);
+  }
+
+  function vibrateString(si, neckId) {
+    const neck = document.getElementById(neckId);
+    if (!neck) return;
+    const rows = neck.querySelectorAll('.string-row');
+    const row = rows[si + 1]; // +1 for fret number row
+    if (!row) return;
+    const line = row.querySelector('.string-line');
+    if (!line) return;
+    line.classList.add('vibrating');
+    setTimeout(() => line.classList.remove('vibrating'), 700);
   }
 
   function highlightNeckString(si, fret) {
