@@ -56,11 +56,13 @@ const Xylophone = (() => {
       };
 
       bar.addEventListener('pointerdown', e => { e.preventDefault(); touch(); });
+      bar.addEventListener('pointercancel', () => bar.classList.remove('hit'));
       inst.appendChild(bar);
     });
   }
 
   function kbDown(e) {
+    if (Router.getCurrent() !== 'xylophone') return;
     if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     const idx = KB_KEYS.indexOf(e.key.toLowerCase());
     if (idx < 0) return;

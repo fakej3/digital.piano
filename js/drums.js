@@ -34,15 +34,18 @@ const Drums = (() => {
       el.id = 'pad-' + pad.id;
       el.dataset.pad = pad.id;
       el.style.gridArea = pad.gridArea;
+      // Ensure minimum 44px touch target on mobile
+      el.style.minHeight = '64px';
       el.innerHTML = `
         <span class="drum-name">${pad.name}</span>
         <span class="drum-key">${pad.key}${pad.openKey ? '/' + pad.openKey : ''}</span>
       `;
 
+      // Use pointerdown for multi-touch support (each pointer fires independently)
       el.addEventListener('pointerdown', e => {
         e.preventDefault();
-        // Rough velocity from tap speed / position
-        const vel = Math.min(1, 0.6 + Math.random() * 0.35);
+        // Velocity: slightly randomised for a live feel (no pressure API needed)
+        const vel = Math.min(1, 0.55 + Math.random() * 0.4);
         audioEngine.init().then(() => triggerPad(pad, vel, false));
       });
 
@@ -63,12 +66,17 @@ const Drums = (() => {
 
     const el = document.getElementById('pad-' + pad.id);
     if (el) {
+      // Clear any existing hit timer to prevent stuck state on rapid hits
+      if (el._hitTimer) clearTimeout(el._hitTimer);
       el.classList.add('hit');
       const shock = document.createElement('div');
       shock.className = 'drum-shockwave';
       el.appendChild(shock);
       shock.addEventListener('animationend', () => shock.remove());
-      setTimeout(() => el.classList.remove('hit'), 120);
+      el._hitTimer = setTimeout(() => {
+        el.classList.remove('hit');
+        el._hitTimer = null;
+      }, 120);
     }
 
     hitCount++;

@@ -84,6 +84,14 @@
 .piano-key.white.pressed .key-label { color: var(--primary-dk); }
 
 /* ===== GUITAR & UKULELE NECK ===== */
+.guitar-neck,
+.guitar-neck-wrap,
+.fretboard,
+.fretboard-wrap {
+  touch-action: none;  /* prevent scroll hijacking on neck/fretboard surfaces */
+  user-select: none;
+}
+
 .string-row {
   display: flex;
   align-items: center;
@@ -112,6 +120,7 @@
 .fret-cell {
   flex: 1;
   height: 50px;
+  min-height: 44px; /* minimum touch target */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -119,6 +128,7 @@
   border-left: 2px solid var(--border-lg);
   position: relative;
   transition: background var(--transition-fast);
+  touch-action: none;
 }
 .fret-cell:hover { background: rgba(124,95,230,0.1); }
 .fret-cell:first-child { border-left: 4px solid var(--text-muted); }
@@ -394,13 +404,15 @@
   gap: 4px;
   width: 72px;
   height: 90px;
+  min-width: 44px;
+  min-height: 44px;
   background: linear-gradient(135deg, var(--surface2), var(--surface3));
   border: 2px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
   transition: all var(--transition-fast);
   user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
 }
 .flute-key:hover { border-color: var(--info); background: rgba(96,165,250,0.08); }
 .flute-key.pressed {
@@ -466,13 +478,15 @@
   gap: 2px;
   width: 58px;
   height: 68px;
+  min-width: 44px;
+  min-height: 44px;
   background: var(--surface2);
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
   user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
 }
 .violin-key:hover { border-color: var(--secondary); }
 .violin-key.pressed {
@@ -754,10 +768,13 @@
 .bm-step {
   flex: 1;
   height: 40px;
+  min-height: 44px;
   border-right: 1px solid var(--border);
   cursor: pointer;
   transition: background var(--transition-fast);
   position: relative;
+  touch-action: manipulation;
+  user-select: none;
 }
 .bm-step:last-child { border-right: none; }
 .bm-step:nth-child(4n+1) { border-left: 2px solid var(--border-lg); }

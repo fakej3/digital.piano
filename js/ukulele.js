@@ -1,6 +1,12 @@
 /* ===================================================
    InstrumentVerse — ukulele.js
-   Ukulele with chord diagrams (GCEA tuning)
+   Ukulele with chord diagrams (GCEA tuning).
+   Supports:
+     - Chord select + click-to-strum
+     - Swipe DOWN on neck = downstroke strum
+     - Swipe UP   on neck = upstroke strum
+     - Individual fret cell tap = single note
+     - Per-string vibration visual
    =================================================== */
 
 const Ukulele = (() => {
@@ -39,7 +45,7 @@ const Ukulele = (() => {
         grid.querySelectorAll('.chord-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         buildNeck(CHORDS[name]);
-        strumChord(CHORDS[name]);
+        audioEngine.init().then(() => strumChord(CHORDS[name], 'down'));
       });
       grid.appendChild(btn);
     });
@@ -64,7 +70,9 @@ const Ukulele = (() => {
       const row = document.createElement('div');
       row.className = 'string-row';
       row.innerHTML = `<span class="string-name">${name}</span>`;
-      const line = document.createElement('div'); line.className = 'string-line'; row.appendChild(line);
+      const line = document.createElement('div');
+      line.className = 'string-line';
+      row.appendChild(line);
 
       for (let f = 0; f <= FRET_COUNT; f++) {
         const cell = document.createElement('div');
@@ -81,13 +89,17 @@ const Ukulele = (() => {
         }
         cell.appendChild(dot);
 
-        cell.addEventListener('click', () => {
+        cell.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          e.stopPropagation(); // don't fire swipe-start
           const freq = fretFreq(si, f);
           if (freq) {
             audioEngine.init().then(() => {
               audioEngine.playGuitar(freq, 0.7, false);
               dot.classList.add('active');
               setTimeout(() => dot.classList.remove('active'), 400);
+              vibrateString(si);
+              Storage.incrementNotes();
             });
           }
         });
@@ -97,17 +109,17 @@ const Ukulele = (() => {
     });
   }
 
-  function strumChord(frets) {
-    const delay = 20;
-    frets.forEach((fret, si) => {
+  function strumChord(frets, direction = 'down') {
+    const delay = 22;
+    const order = direction === 'down' ? [0,1,2,3] : [3,2,1,0];
+    order.forEach((si, i) => {
+      const fret = frets[si];
       const freq = fretFreq(si, fret);
       if (!freq) return;
       setTimeout(() => {
-        audioEngine.init().then(() => {
-          audioEngine.playGuitar(freq, 0.65, false);
-          vibrateString(si);
-        });
-      }, si * delay);
+        audioEngine.playGuitar(freq, 0.65, false);
+        vibrateString(si);
+      }, i * delay);
     });
     Storage.incrementNotes(4);
     Storage.addXP(1);
@@ -122,23 +134,53 @@ const Ukulele = (() => {
     if (!row) return;
     const line = row.querySelector('.string-line');
     if (!line) return;
+    line.classList.remove('vibrating');
+    void line.offsetWidth; // force reflow to restart animation
     line.classList.add('vibrating');
     setTimeout(() => line.classList.remove('vibrating'), 700);
   }
 
-  // Swipe to strum
+  /* ===== SWIPE TO STRUM ===== */
   let swipeStart = null;
+  let swipeMoved = false;
+  const SWIPE_THRESHOLD = 25;
+
   function initSwipe() {
     const neck = document.getElementById('ukuleleNeck');
     if (!neck) return;
-    neck.addEventListener('pointerdown', e => { swipeStart = e.clientY; });
+
+    neck.addEventListener('pointerdown', e => {
+      if (e.target.closest('.fret-cell')) return;
+      swipeStart = { y: e.clientY };
+      swipeMoved = false;
+      neck.setPointerCapture(e.pointerId);
+    }, { passive: false });
+
+    neck.addEventListener('pointermove', e => {
+      if (!swipeStart) return;
+      const dy = e.clientY - swipeStart.y;
+      if (Math.abs(dy) > SWIPE_THRESHOLD && !swipeMoved) {
+        swipeMoved = true;
+        if (!currentChord) return;
+        const dir = dy > 0 ? 'down' : 'up';
+        audioEngine.init().then(() => strumChord(CHORDS[currentChord], dir));
+      }
+    }, { passive: false });
+
     neck.addEventListener('pointerup', e => {
-      if (swipeStart === null || !currentChord) return;
-      if (Math.abs(e.clientY - swipeStart) > 25) {
-        strumChord(CHORDS[currentChord]);
-        audioEngine.init();
+      if (swipeStart && !swipeMoved) {
+        // Tap without swipe — strum down if chord selected
+        if (currentChord && !e.target.closest('.fret-cell')) {
+          audioEngine.init().then(() => strumChord(CHORDS[currentChord], 'down'));
+        }
       }
       swipeStart = null;
+      swipeMoved = false;
+    });
+
+    neck.addEventListener('pointercancel', () => {
+      swipeStart = null;
+      swipeMoved = false;
     });
   }
 
@@ -150,7 +192,12 @@ const Ukulele = (() => {
     initSwipe();
   }
 
-  function destroy() { initialized = false; }
+  function destroy() {
+    currentChord = null;
+    swipeStart   = null;
+    swipeMoved   = false;
+    initialized  = false;
+  }
 
   return { init, destroy };
 })();

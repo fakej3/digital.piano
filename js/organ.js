@@ -155,9 +155,10 @@ const Organ = (() => {
           }
         };
 
-        key.addEventListener('pointerdown', e => { e.preventDefault(); start(); });
-        key.addEventListener('pointerup',   stop);
-        key.addEventListener('pointerleave',stop);
+        key.addEventListener('pointerdown',   e => { e.preventDefault(); start(); });
+        key.addEventListener('pointerup',    stop);
+        key.addEventListener('pointerleave', stop);
+        key.addEventListener('pointercancel',stop);
         keyboard.appendChild(key);
       });
     });

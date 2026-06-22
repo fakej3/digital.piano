@@ -83,6 +83,10 @@ const Bass = (() => {
             UI.updateXPDisplay();
           });
         });
+        // Clear active state if touch is cancelled mid-gesture
+        cell.addEventListener('pointercancel', () => {
+          dot.classList.remove('active');
+        });
         row.appendChild(cell);
       }
       fb.appendChild(row);

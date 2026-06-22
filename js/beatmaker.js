@@ -24,6 +24,8 @@ const BeatMaker = (() => {
   let currentStep = 0;
   let intervalId  = null;
   let initialized = false;
+  // Mute state per track
+  let mutedTracks = new Set();
 
   const PRESETS = {
     'Basic Rock': {
@@ -79,7 +81,13 @@ const BeatMaker = (() => {
       bpmSlider.addEventListener('input', e => {
         bpm = parseInt(e.target.value);
         if (bpmVal) bpmVal.textContent = bpm;
-        if (playing) { stopSequencer(); startSequencer(); }
+        // Restart sequencer to pick up new BPM without resetting step counter
+        if (playing) {
+          clearInterval(intervalId);
+          intervalId = null;
+          const ms = (60 / bpm / 4) * 1000;
+          intervalId = setInterval(tick, ms);
+        }
       });
     }
     controls.appendChild(bpmGroup);
@@ -117,6 +125,20 @@ const BeatMaker = (() => {
       label.className = 'bm-track-name';
       label.style.color = track.color;
       label.textContent = track.name;
+      label.title = 'Click to mute/unmute';
+      label.style.cursor = 'pointer';
+      label.style.userSelect = 'none';
+      label.addEventListener('click', () => {
+        if (mutedTracks.has(ti)) {
+          mutedTracks.delete(ti);
+          label.style.opacity = '1';
+          label.title = 'Click to mute';
+        } else {
+          mutedTracks.add(ti);
+          label.style.opacity = '0.3';
+          label.title = 'Click to unmute';
+        }
+      });
       row.appendChild(label);
 
       const steps = document.createElement('div');
@@ -149,10 +171,9 @@ const BeatMaker = (() => {
 
   function tick() {
     audioEngine.init();
-    const t = audioEngine.now;
 
     TRACKS.forEach((track, ti) => {
-      if (pattern[ti][currentStep]) {
+      if (pattern[ti][currentStep] && !mutedTracks.has(ti)) {
         Drums.triggerByName(track.id, 0.85);
       }
     });
@@ -171,7 +192,8 @@ const BeatMaker = (() => {
 
   function startSequencer() {
     const ms = (60 / bpm / 4) * 1000; // 16th notes
-    tick(); // immediate first tick
+    // Tick immediately then schedule subsequent ticks
+    tick();
     intervalId = setInterval(tick, ms);
   }
 

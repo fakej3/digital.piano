@@ -61,9 +61,10 @@ const Flute = (() => {
         }
       };
 
-      key.addEventListener('pointerdown', e => { e.preventDefault(); start(); });
-      key.addEventListener('pointerup',   stop);
-      key.addEventListener('pointerleave',stop);
+      key.addEventListener('pointerdown',   e => { e.preventDefault(); start(); });
+      key.addEventListener('pointerup',    stop);
+      key.addEventListener('pointerleave', stop);
+      key.addEventListener('pointercancel',stop);
       row.appendChild(key);
     });
 

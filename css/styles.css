@@ -1272,6 +1272,7 @@ img { max-width: 100%; }
 }
 .chord-btn {
   padding: 8px 16px;
+  min-height: 44px; /* minimum touch target */
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
   font-weight: 700;
@@ -1281,6 +1282,8 @@ img { max-width: 100%; }
   cursor: pointer;
   transition: all var(--transition-fast);
   font-family: 'Georgia', serif;
+  touch-action: manipulation;
+  user-select: none;
 }
 .chord-btn:hover { border-color: var(--primary); color: var(--primary-lt); }
 .chord-btn.active {

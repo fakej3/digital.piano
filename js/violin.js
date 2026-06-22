@@ -102,6 +102,7 @@ const Violin = (() => {
         };
         btn.addEventListener('pointerup', stop);
         btn.addEventListener('pointerleave', stop);
+        btn.addEventListener('pointercancel', stop);
 
         keys.appendChild(btn);
       }
@@ -127,8 +128,16 @@ const Violin = (() => {
     const key = e.key.toLowerCase();
     const mapped = KB_MAP[key];
     if (!mapped) return;
+    if (activeNotes[mapped]) return; // already playing
     const btn = document.querySelector(`#violinWrap [data-id="${mapped}"]`);
-    if (btn) btn.dispatchEvent(new PointerEvent('pointerdown'));
+    if (!btn) return;
+    const freq = parseFloat(btn.dataset.freq);
+    audioEngine.init().then(() => {
+      const nd = audioEngine.playViolin(freq, 0.75);
+      activeNotes[mapped] = nd;
+      btn.classList.add('pressed');
+      Storage.incrementNotes();
+    });
   }
 
   function kbUp(e) {

@@ -1,6 +1,14 @@
 /* ===================================================
    InstrumentVerse — guitar.js
-   Guitar with chord mode and fretboard pick mode
+   Guitar with chord mode and fretboard pick mode.
+   Supports:
+     - Chord select + click-to-strum
+     - Swipe DOWN on neck = downstroke strum
+     - Swipe UP on neck   = upstroke strum
+     - Individual fret cell tap = single note
+     - Fretboard mode: swipe across strings = strum
+     - Per-string vibration visual
+     - Polyphony: each string rings independently
    =================================================== */
 
 const Guitar = (() => {
@@ -50,7 +58,9 @@ const Guitar = (() => {
         grid.querySelectorAll('.chord-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         buildNeck(CHORDS[name]);
-        strumChord(CHORDS[name]);
+        audioEngine.init().then(() => {
+          strumChord(CHORDS[name], 'down');
+        });
         Storage.addXP(1);
         UI.updateXPDisplay();
       });
@@ -71,9 +81,6 @@ const Guitar = (() => {
       cell.style.cssText = 'flex:1;text-align:center;font-size:0.65rem;color:var(--text-dim);padding:4px 0;';
       cell.textContent = f === 0 ? 'O' : f;
       numRow.appendChild(cell);
-      if (FRET_MARKERS[f]) {
-        // add marker below later
-      }
     });
     neck.appendChild(numRow);
 
@@ -103,13 +110,17 @@ const Guitar = (() => {
           else if (f === cf && cf > 0) { dot.classList.add('pressed'); }
         }
         cell.appendChild(dot);
-        cell.addEventListener('click', () => {
+        cell.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          e.stopPropagation(); // don't trigger swipe-start on neck
           const freq = fretFreq(si, f);
           if (freq) {
             audioEngine.init().then(() => {
               audioEngine.playGuitar(freq, 0.8);
               dot.classList.add('active');
               setTimeout(() => dot.classList.remove('active'), 400);
+              vibrateString(si, 'guitarNeck');
+              Storage.incrementNotes();
             });
           }
         });
@@ -120,7 +131,7 @@ const Guitar = (() => {
   }
 
   function strumChord(frets, direction = 'down') {
-    const delay = 22;
+    const delay = 28; // ms between each string for strum effect
     const order = direction === 'down' ? [0,1,2,3,4,5] : [5,4,3,2,1,0];
     order.forEach((si, i) => {
       const fret = frets[si];
@@ -128,11 +139,9 @@ const Guitar = (() => {
       const freq = fretFreq(si, fret);
       if (!freq) return;
       setTimeout(() => {
-        audioEngine.init().then(() => {
-          audioEngine.playGuitar(freq, 0.75);
-          highlightNeckString(si, fret);
-          vibrateString(si, 'guitarNeck');
-        });
+        audioEngine.playGuitar(freq, 0.75);
+        highlightNeckString(si, fret);
+        vibrateString(si, 'guitarNeck');
       }, i * delay);
     });
     Storage.incrementNotes(6);
@@ -146,6 +155,9 @@ const Guitar = (() => {
     if (!row) return;
     const line = row.querySelector('.string-line');
     if (!line) return;
+    line.classList.remove('vibrating');
+    // Force reflow so re-adding the class restarts animation
+    void line.offsetWidth;
     line.classList.add('vibrating');
     setTimeout(() => line.classList.remove('vibrating'), 700);
   }
@@ -156,7 +168,10 @@ const Guitar = (() => {
     const cell = neck.querySelector(`[data-string="${si}"][data-fret="${fret}"]`);
     if (cell) {
       const dot = cell.querySelector('.fret-dot');
-      if (dot) { dot.classList.add('active'); setTimeout(() => dot.classList.remove('active'), 400); }
+      if (dot) {
+        dot.classList.add('active');
+        setTimeout(() => dot.classList.remove('active'), 400);
+      }
     }
   }
 
@@ -179,12 +194,17 @@ const Guitar = (() => {
     STRING_NAMES.forEach((name, si) => {
       const row = document.createElement('div');
       row.className = 'string-row';
+      row.dataset.stringIdx = si;
       row.innerHTML = `<span class="string-name">${name}</span>`;
-      const line = document.createElement('div'); line.className = 'string-line'; row.appendChild(line);
+      const line = document.createElement('div');
+      line.className = 'string-line';
+      row.appendChild(line);
 
       for (let f = 0; f <= FRET_COUNT; f++) {
         const cell = document.createElement('div');
         cell.className = 'fret-cell';
+        cell.dataset.string = si;
+        cell.dataset.fret   = f;
         const freq = fretFreq(si, f);
         if (!freq) { row.appendChild(cell); continue; }
 
@@ -206,6 +226,7 @@ const Guitar = (() => {
             audioEngine.playGuitar(freq, 0.8);
             dot.classList.add('active');
             setTimeout(() => dot.classList.remove('active'), 400);
+            vibrateString(si, 'guitarFretboard');
             Storage.incrementNotes();
           });
         });
@@ -232,22 +253,113 @@ const Guitar = (() => {
     fb.appendChild(markerRow);
   }
 
-  /* ===== SWIPE TO STRUM ===== */
+  /* ===== SWIPE TO STRUM (Chord neck) ===== */
   let strumStart = null;
+  let strumMoved = false;
+  const SWIPE_THRESHOLD = 30; // px vertical movement to trigger strum
+
   function initStrumGesture() {
     const neck = document.getElementById('guitarNeck');
     if (!neck) return;
-    neck.addEventListener('pointerdown', e => { strumStart = e.clientY; });
-    neck.addEventListener('pointerup', e => {
-      if (strumStart === null || !currentChord) return;
-      const dy = e.clientY - strumStart;
-      if (Math.abs(dy) > 30) {
+
+    neck.addEventListener('pointerdown', e => {
+      // Only start swipe if not clicking a fret cell
+      if (e.target.closest('.fret-cell')) return;
+      strumStart = { y: e.clientY, x: e.clientX };
+      strumMoved = false;
+      neck.setPointerCapture(e.pointerId);
+    }, { passive: false });
+
+    neck.addEventListener('pointermove', e => {
+      if (!strumStart) return;
+      const dy = e.clientY - strumStart.y;
+      if (Math.abs(dy) > SWIPE_THRESHOLD && !strumMoved) {
+        strumMoved = true;
+        if (!currentChord) return;
         const dir = dy > 0 ? 'down' : 'up';
-        strumChord(CHORDS[currentChord], dir);
-        audioEngine.init();
+        audioEngine.init().then(() => strumChord(CHORDS[currentChord], dir));
+      }
+    }, { passive: false });
+
+    neck.addEventListener('pointerup', e => {
+      if (strumStart && !strumMoved) {
+        // Short tap without movement — if chord selected, strum down
+        if (currentChord && !e.target.closest('.fret-cell')) {
+          audioEngine.init().then(() => strumChord(CHORDS[currentChord], 'down'));
+        }
       }
       strumStart = null;
+      strumMoved = false;
     });
+
+    neck.addEventListener('pointercancel', () => {
+      strumStart = null;
+      strumMoved = false;
+    });
+  }
+
+  /* ===== SWIPE TO STRUM (Fretboard mode) ===== */
+  let fbSwipeStart = null;
+  let fbSwipeMoved = false;
+  let fbSwipeFret  = null; // fret column strummed at
+
+  function initFretboardSwipe() {
+    const fb = document.getElementById('guitarFretboard');
+    if (!fb) return;
+
+    fb.addEventListener('pointerdown', e => {
+      const cell = e.target.closest('.fret-cell');
+      if (!cell) return;
+      fbSwipeStart = { y: e.clientY, x: e.clientX, si: parseInt(cell.dataset.string), fret: parseInt(cell.dataset.fret) };
+      fbSwipeMoved = false;
+      fbSwipeFret  = parseInt(cell.dataset.fret);
+      fb.setPointerCapture(e.pointerId);
+    }, { passive: false });
+
+    fb.addEventListener('pointermove', e => {
+      if (!fbSwipeStart) return;
+      const dy = e.clientY - fbSwipeStart.y;
+      if (Math.abs(dy) > SWIPE_THRESHOLD && !fbSwipeMoved) {
+        fbSwipeMoved = true;
+        const dir = dy > 0 ? 'down' : 'up';
+        const fret = fbSwipeFret;
+        const order = dir === 'down' ? [0,1,2,3,4,5] : [5,4,3,2,1,0];
+        audioEngine.init().then(() => {
+          order.forEach((si, i) => {
+            const freq = fretFreq(si, fret);
+            if (!freq) return;
+            setTimeout(() => {
+              audioEngine.playGuitar(freq, 0.72);
+              vibrateString(si, 'guitarFretboard');
+              highlightFretboardCell(si, fret);
+            }, i * 28);
+          });
+        });
+        Storage.incrementNotes(6);
+      }
+    }, { passive: false });
+
+    fb.addEventListener('pointerup', () => {
+      fbSwipeStart = null;
+      fbSwipeMoved = false;
+    });
+    fb.addEventListener('pointercancel', () => {
+      fbSwipeStart = null;
+      fbSwipeMoved = false;
+    });
+  }
+
+  function highlightFretboardCell(si, fret) {
+    const fb = document.getElementById('guitarFretboard');
+    if (!fb) return;
+    const cell = fb.querySelector(`[data-string="${si}"][data-fret="${fret}"]`);
+    if (cell) {
+      const dot = cell.querySelector('.fret-dot');
+      if (dot) {
+        dot.classList.add('active');
+        setTimeout(() => dot.classList.remove('active'), 350);
+      }
+    }
   }
 
   function init() {
@@ -257,6 +369,7 @@ const Guitar = (() => {
     buildChordUI();
     buildFretboard();
     initStrumGesture();
+    initFretboardSwipe();
 
     // Mode toggle
     const chordBtn = document.getElementById('guitarModeChord');
@@ -277,7 +390,14 @@ const Guitar = (() => {
     }
   }
 
-  function destroy() { initialized = false; }
+  function destroy() {
+    currentChord = null;
+    strumStart   = null;
+    strumMoved   = false;
+    fbSwipeStart = null;
+    fbSwipeMoved = false;
+    initialized  = false;
+  }
 
   return { init, destroy };
 })();
