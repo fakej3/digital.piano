@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/instruments.css">
   <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/polish.css">
 </head>
 <body>
 
@@ -142,6 +143,7 @@
     </div>
     <div class="piano-wrap" id="pianoWrap">
       <div class="piano-keyboard" id="pianoKeyboard"></div>
+      <canvas class="viz-canvas" id="pianoVizCanvas"></canvas>
     </div>
     <div class="key-hint">
       <span>Keys: <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd><kbd>J</kbd> (white) &nbsp;
@@ -289,6 +291,7 @@
       </div>
     </div>
     <div class="organ-wrap" id="organWrap"></div>
+    <canvas class="viz-canvas" id="organVizCanvas" style="margin-top:12px;"></canvas>
     <div class="key-hint"><span>Same keyboard mapping as Piano · Adjust drawbars for tone</span></div>
   </section>
 
@@ -302,6 +305,7 @@
       </div>
     </div>
     <div class="synth-wrap" id="synthWrap"></div>
+    <canvas class="viz-canvas" id="synthVizCanvas" style="margin-top:12px;"></canvas>
   </section>
 
   <!-- ===== BEAT MAKER ===== -->

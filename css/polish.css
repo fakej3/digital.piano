@@ -1,0 +1,572 @@
+/* =====================================================
+   InstrumentVerse — polish.css
+   UX polish: hover, press, micro-interactions, visualizers
+   ===================================================== */
+
+/* ===== PAGE TRANSITIONS ===== */
+.page.active {
+  animation: pageEnter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page.active .hero { animation: pageEnter 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both; }
+.page.active .section:nth-child(1) { animation: pageEnter 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.07s both; }
+.page.active .section:nth-child(2) { animation: pageEnter 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both; }
+.page.active .section:nth-child(3) { animation: pageEnter 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.17s both; }
+.page.active .section:nth-child(4) { animation: pageEnter 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both; }
+
+/* Page flash overlay on nav */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 500;
+  transition: opacity 0.15s ease;
+}
+body.page-flash::after { opacity: 0.35; }
+
+/* ===== NAVIGATION IMPROVEMENTS ===== */
+.nav-link {
+  position: relative;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 70%;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 1px;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: center;
+}
+.nav-link.active::after { transform: translateX(-50%) scaleX(1); }
+.nav-link.active { color: var(--primary-lt); }
+
+/* Hamburger to X animation */
+.nav-toggle span {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.15s ease,
+              background 0.15s ease;
+}
+.nav-toggle[aria-expanded="true"] span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+.nav-toggle[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0; transform: scaleX(0);
+}
+.nav-toggle[aria-expanded="true"] span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+/* Mobile nav open animation */
+@media (max-width: 768px) {
+  .nav-links.open {
+    animation: navSlideDown 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes navSlideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* XP pill hover improvement */
+.xp-pill {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.xp-pill:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 12px var(--primary-glow);
+  transform: scale(1.03);
+}
+.xp-pill.leveled-up {
+  animation: xpPillPop 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes xpPillPop {
+  0%   { transform: scale(1); box-shadow: none; }
+  30%  { transform: scale(1.18); box-shadow: 0 0 24px var(--primary-glow); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:active:not(:disabled) {
+  transform: translateY(1px) !important;
+  box-shadow: none !important;
+  transition-duration: 0.06s !important;
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 28px var(--primary-glow);
+}
+
+/* ===== INSTRUMENT CARDS ===== */
+.inst-card {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.22s ease,
+              border-color 0.2s ease !important;
+}
+.inst-card:hover {
+  transform: translateY(-5px) scale(1.015) !important;
+  box-shadow: 0 16px 48px var(--primary-glow), 0 4px 16px rgba(0,0,0,0.4) !important;
+}
+.inst-card:active {
+  transform: translateY(-1px) scale(0.99) !important;
+  transition-duration: 0.07s !important;
+}
+.inst-card:hover .inst-card-emoji {
+  display: inline-block;
+  animation: emojiPop 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes emojiPop {
+  0%   { transform: scale(1) rotate(0deg); }
+  35%  { transform: scale(1.35) rotate(-10deg); }
+  65%  { transform: scale(1.2) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Staggered instrument grid entrance */
+#instrumentsGrid .inst-card {
+  animation: cardEntrance 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+#instrumentsGrid .inst-card:nth-child(1)  { animation-delay: 0.04s; }
+#instrumentsGrid .inst-card:nth-child(2)  { animation-delay: 0.08s; }
+#instrumentsGrid .inst-card:nth-child(3)  { animation-delay: 0.12s; }
+#instrumentsGrid .inst-card:nth-child(4)  { animation-delay: 0.16s; }
+#instrumentsGrid .inst-card:nth-child(5)  { animation-delay: 0.20s; }
+#instrumentsGrid .inst-card:nth-child(6)  { animation-delay: 0.24s; }
+#instrumentsGrid .inst-card:nth-child(7)  { animation-delay: 0.28s; }
+#instrumentsGrid .inst-card:nth-child(8)  { animation-delay: 0.32s; }
+#instrumentsGrid .inst-card:nth-child(9)  { animation-delay: 0.36s; }
+#instrumentsGrid .inst-card:nth-child(10) { animation-delay: 0.40s; }
+#instrumentsGrid .inst-card:nth-child(11) { animation-delay: 0.44s; }
+#instrumentsGrid .inst-card:nth-child(12) { animation-delay: 0.48s; }
+@keyframes cardEntrance {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== QUICK CARDS ===== */
+.quick-card {
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.2s ease,
+              border-color 0.2s ease,
+              background 0.15s ease !important;
+}
+.quick-card:hover {
+  transform: translateY(-3px) scale(1.03) !important;
+}
+.quick-card:active {
+  transform: scale(0.96) !important;
+  transition-duration: 0.07s !important;
+}
+
+/* ===== LESSON / LEARN CARDS ===== */
+.lesson-card, .learn-card {
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.2s ease,
+              border-color 0.2s ease !important;
+}
+.lesson-card:hover, .learn-card:hover { transform: translateY(-3px) !important; }
+.lesson-card:active, .learn-card:active {
+  transform: translateY(0) scale(0.99) !important;
+  transition-duration: 0.07s !important;
+}
+
+/* ===== PIANO KEY POLISH ===== */
+.piano-key {
+  transition: transform 0.05s ease, background 0.05s ease, box-shadow 0.1s ease !important;
+}
+.piano-key.white.pressed {
+  background: linear-gradient(180deg, var(--primary-lt) 0%, #c8d8ff 100%) !important;
+  box-shadow: inset 0 3px 10px rgba(0,0,0,0.2), 0 0 24px rgba(124,95,230,0.45) !important;
+}
+.piano-key.black.pressed {
+  box-shadow: inset 0 3px 6px rgba(0,0,0,0.5), 0 0 20px var(--primary-glow), 0 0 40px rgba(124,95,230,0.25) !important;
+}
+
+/* Piano key press ripple */
+.key-press-ring {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%) scale(0);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(124,95,230,0.7);
+  pointer-events: none;
+  animation: keyRing 0.55s ease-out forwards;
+}
+@keyframes keyRing {
+  to { transform: translateX(-50%) scale(7); opacity: 0; }
+}
+
+/* ===== GUITAR / UKULELE STRING VIBRATE ===== */
+.string-line.vibrating {
+  animation: strVib 0.12s ease-out 5;
+  filter: drop-shadow(0 0 5px var(--primary));
+}
+@keyframes strVib {
+  0%, 100% { transform: translateY(-50%); }
+  33%  { transform: translateY(calc(-50% - 3.5px)); }
+  66%  { transform: translateY(calc(-50% + 3.5px)); }
+}
+
+/* ===== DRUM PAD POLISH ===== */
+.drum-pad {
+  transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.08s ease !important;
+}
+.drum-pad:active, .drum-pad.hit {
+  transform: scale(0.93) !important;
+  filter: brightness(1.5) !important;
+}
+
+/* Drum shockwave */
+.drum-shockwave {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 3px solid rgba(255,255,255,0.65);
+  pointer-events: none;
+  animation: drumShock 0.45s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+@keyframes drumShock {
+  from { opacity: 0.9; transform: scale(0.85); }
+  to   { opacity: 0;   transform: scale(1.6); }
+}
+
+/* ===== MALLET BARS ===== */
+.mallet-bar {
+  transition: transform 0.08s ease, filter 0.08s ease !important;
+}
+.mallet-bar:active, .mallet-bar.hit {
+  transform: scaleY(0.91) scaleX(1.04) !important;
+  filter: brightness(1.45) !important;
+}
+.mallet-bar.hit .bar-body {
+  animation: barFlash 0.4s ease-out;
+}
+@keyframes barFlash {
+  0%   { box-shadow: var(--shadow), 0 0 28px rgba(255,255,255,0.8); }
+  100% { box-shadow: var(--shadow-sm); }
+}
+
+/* ===== ORGAN KEY GLOW ===== */
+.piano-key.organ-key.white.pressed {
+  background: linear-gradient(180deg, #c084fc 0%, #9333ea 100%) !important;
+  box-shadow: inset 0 3px 8px rgba(0,0,0,0.2), 0 0 28px rgba(147,51,234,0.55) !important;
+}
+.piano-key.organ-key.black.pressed {
+  background: linear-gradient(180deg, #7c3aed 0%, #4c1d95 100%) !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.4), 0 0 22px rgba(124,58,237,0.7) !important;
+}
+
+/* ===== SYNTH KEY GLOW ===== */
+.piano-key.synth-key.white.pressed {
+  background: linear-gradient(180deg, #f9a8d4 0%, #ec4899 100%) !important;
+  box-shadow: inset 0 3px 8px rgba(0,0,0,0.2), 0 0 28px rgba(236,72,153,0.5) !important;
+}
+.piano-key.synth-key.black.pressed {
+  background: linear-gradient(180deg, #db2777 0%, #9d174d 100%) !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.4), 0 0 22px rgba(236,72,153,0.65) !important;
+}
+
+/* ===== FLUTE KEY POLISH ===== */
+.flute-key {
+  transition: transform 0.1s ease, background 0.12s ease,
+              box-shadow 0.15s ease, border-color 0.12s ease !important;
+}
+.flute-key:hover:not(.pressed) {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, rgba(124,95,230,0.18), rgba(124,95,230,0.08)) !important;
+  transform: translateY(-2px);
+}
+.flute-key.pressed {
+  transform: scale(0.94) !important;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dk)) !important;
+  border-color: var(--primary-lt) !important;
+  box-shadow: 0 0 24px var(--primary-glow) !important;
+}
+
+/* ===== VIOLIN KEY POLISH ===== */
+.violin-key {
+  transition: transform 0.08s ease, background 0.1s ease, box-shadow 0.12s ease !important;
+}
+.violin-key:hover:not(.pressed) {
+  background: rgba(124,95,230,0.18) !important;
+  transform: scale(1.03);
+}
+.violin-key.pressed {
+  transform: scale(0.94) !important;
+  background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
+  box-shadow: 0 0 20px var(--primary-glow) !important;
+}
+
+/* ===== WAVEFORM VISUALIZER ===== */
+.viz-wrap {
+  max-width: 1200px;
+  margin: var(--space-3) auto 0;
+  padding: 0 var(--space-4);
+}
+.viz-canvas {
+  display: block;
+  width: 100%;
+  height: 52px;
+  border-radius: var(--radius);
+  background: rgba(11,11,22,0.5);
+  border: 1px solid var(--border);
+  opacity: 0.7;
+  transition: opacity 0.25s ease;
+}
+.viz-canvas:hover { opacity: 1; }
+
+/* ===== STREAK CARD ===== */
+.streak-card {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.streak-number[data-streak]:not([data-streak="0"]) {
+  text-shadow: 0 0 20px rgba(251,191,36,0.5);
+}
+.streak-fire {
+  display: inline-block;
+  animation: firePulse 1.8s ease-in-out infinite;
+}
+@keyframes firePulse {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(251,191,36,0.5)); transform: scale(1); }
+  50%       { filter: drop-shadow(0 0 14px rgba(251,191,36,0.95)); transform: scale(1.12); }
+}
+
+/* ===== XP / PROGRESS BAR SHIMMER ===== */
+.xp-fill, .progress-fill, .level-progress-fill, .loading-fill {
+  position: relative;
+  overflow: hidden;
+}
+.xp-fill::after, .progress-fill::after,
+.level-progress-fill::after, .loading-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.28) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: barShimmer 2.8s ease-in-out infinite;
+}
+@keyframes barShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ===== TOAST POLISH ===== */
+.toast {
+  display: flex !important;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: var(--space-4) !important;
+  border-left-width: 3px;
+  border-left-style: solid;
+  border-left-color: var(--border-lg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.toast::before {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.toast-success { border-left-color: var(--accent); }
+.toast-success::before { content: '✓'; color: var(--accent); font-weight: 700; }
+.toast-error   { border-left-color: var(--danger); }
+.toast-error::before   { content: '✕'; color: var(--danger); font-weight: 700; }
+.toast-warning { border-left-color: var(--warning); }
+.toast-warning::before { content: '!'; color: var(--warning); font-weight: 700; }
+.toast-info    { border-left-color: var(--primary); }
+.toast-info::before    { content: '♪'; color: var(--primary); font-weight: 700; }
+
+/* ===== ACHIEVEMENT POLISH ===== */
+.achievement {
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+.achievement.earned {
+  border-color: rgba(251,191,36,0.5) !important;
+}
+.achievement.earned:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(251,191,36,0.18);
+}
+.achievement.newly-earned {
+  animation: achieveUnlock 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes achieveUnlock {
+  0%   { transform: scale(0.7) rotate(-6deg); opacity: 0; }
+  60%  { transform: scale(1.06) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+.achievement.earned .achievement-icon {
+  transition: filter 0.3s ease, transform 0.3s ease;
+}
+.achievement.earned:hover .achievement-icon {
+  transform: scale(1.15) rotate(8deg);
+  filter: drop-shadow(0 0 8px rgba(251,191,36,0.7));
+}
+
+/* ===== FILTER BUTTONS ===== */
+.filter-btn {
+  transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.filter-btn:hover:not(.active) { transform: translateY(-1px); }
+.filter-btn.active { box-shadow: 0 2px 14px var(--primary-glow); }
+.filter-btn:active { transform: scale(0.96) !important; transition-duration: 0.06s !important; }
+
+/* ===== BACK BUTTON ===== */
+.back-btn {
+  transition: all 0.15s ease !important;
+}
+.back-btn:hover { transform: translateX(-2px); }
+
+/* ===== CHORD BUTTONS ===== */
+.chord-btn {
+  transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.chord-btn:hover:not(.active) { transform: translateY(-1px); }
+.chord-btn.active {
+  animation: chordActivate 0.2s ease;
+  box-shadow: 0 2px 14px var(--primary-glow);
+}
+@keyframes chordActivate {
+  0%   { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* ===== MODE BUTTONS ===== */
+.mode-btn {
+  transition: all 0.15s ease !important;
+}
+.mode-btn:hover:not(.active) { transform: translateY(-1px); }
+.mode-btn:active { transform: scale(0.96) !important; }
+
+/* ===== WAVEFORM SYNTH BUTTONS ===== */
+.waveform-btn {
+  transition: all 0.15s ease !important;
+}
+.waveform-btn:hover:not(.active) { border-color: var(--primary); transform: translateY(-1px); }
+.waveform-btn.active { box-shadow: 0 0 12px var(--primary-glow); }
+
+/* ===== BEATMAKER STEPS ===== */
+.bm-step {
+  transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.08s ease;
+}
+.bm-step:hover { transform: scale(1.06); }
+.bm-step:active { transform: scale(0.94); }
+.bm-step.current-step {
+  box-shadow: inset 0 0 0 2px var(--accent), 0 0 10px rgba(74,222,128,0.35) !important;
+  transform: scaleY(1.07);
+}
+.bm-step.on.current-step { filter: brightness(1.45); }
+
+/* ===== MOBILE TOUCH IMPROVEMENTS ===== */
+@media (pointer: coarse) {
+  .drum-pad:active { transform: scale(0.90) !important; }
+  .piano-key:active { transition-duration: 0.025s !important; }
+  .mallet-bar:active { transform: scaleY(0.89) scaleX(1.05) !important; }
+  .flute-key:active { transform: scale(0.91) !important; }
+  .inst-card:active { transform: scale(0.97) !important; transition-duration: 0.05s !important; }
+  .quick-card:active { transform: scale(0.93) !important; }
+  .btn:active:not(:disabled) { transform: scale(0.97) !important; }
+}
+
+/* ===== LOADING SKELETON ===== */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius);
+  border: none !important;
+}
+@keyframes skeletonShimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+.skeleton-card { height: 160px; border-radius: var(--radius-lg); }
+.skeleton-text { height: 14px; width: 60%; margin-bottom: 8px; }
+.skeleton-text.wide { width: 85%; }
+
+/* ===== SCROLL IMPROVEMENTS ===== */
+.page, .piano-wrap, .guitar-neck-wrap, .fretboard-wrap,
+.lessons-row, .learn-levels {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+}
+
+/* ===== INSTRUMENT PAGE HEADER ENTRANCE ===== */
+.instrument-page .inst-header {
+  animation: pageEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ===== SETTINGS TOGGLES ===== */
+.toggle-slider {
+  transition: background 0.2s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.toggle-slider::before {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.toggle input:checked + .toggle-slider {
+  box-shadow: 0 0 10px rgba(124,95,230,0.35);
+}
+
+/* ===== LEVEL UP CELEBRATION ===== */
+.level-up-overlay {
+  animation: levelUpEnter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes levelUpEnter {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to   { opacity: 1; backdrop-filter: blur(8px); }
+}
+.level-up-content {
+  animation: levelUpBounce 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+}
+@keyframes levelUpBounce {
+  0%   { transform: scale(0.5) translateY(20px); opacity: 0; }
+  65%  { transform: scale(1.06) translateY(-4px); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* ===== GPU ACCELERATION ===== */
+.inst-card, .quick-card, .lesson-card, .learn-card,
+.piano-key, .drum-pad, .mallet-bar, .flute-key, .violin-key,
+.chord-btn, .filter-btn, .btn, .viz-canvas,
+.bm-step, .fret-cell, .back-btn {
+  backface-visibility: hidden;
+}
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+  .page.active,
+  .page.active .hero,
+  .page.active .section,
+  #instrumentsGrid .inst-card { animation: none !important; }
+  .streak-fire { animation: none; }
+  .xp-fill::after, .progress-fill::after,
+  .level-progress-fill::after, .loading-fill::after { animation: none; }
+  .inst-card:hover .inst-card-emoji { animation: none; }
+  .chord-btn.active { animation: none; }
+  .achievement.newly-earned { animation: none; }
+  .key-press-ring { animation: none; }
+  .drum-shockwave { animation: none; }
+  .string-line.vibrating { animation: none; filter: none; }
+  .mallet-bar.hit .bar-body { animation: none; }
+}

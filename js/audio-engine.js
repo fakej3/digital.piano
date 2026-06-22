@@ -49,9 +49,14 @@ class AudioEngine {
       this.compressor.connect(this.dryGain);
       this.compressor.connect(this.convolver);
       this.convolver.connect(this.wetGain);
+      this.analyser = this.ctx.createAnalyser();
+      this.analyser.fftSize = 2048;
+      this.analyser.smoothingTimeConstant = 0.82;
+
       this.dryGain.connect(this.masterGain);
       this.wetGain.connect(this.masterGain);
-      this.masterGain.connect(this.ctx.destination);
+      this.masterGain.connect(this.analyser);
+      this.analyser.connect(this.ctx.destination);
 
       this.initialized = true;
       if (this.ctx.state === 'suspended') await this.ctx.resume();

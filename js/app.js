@@ -385,6 +385,15 @@ const App = (() => {
     if (r.leveledUp) UI.showLevelUp(r.level);
   }
 
+  // ── Page flash transition ──────────────────────────────────────────────────
+
+  function addPageFlash() {
+    Router.onChange(() => {
+      document.body.classList.add('page-flash');
+      setTimeout(() => document.body.classList.remove('page-flash'), 140);
+    });
+  }
+
   // ── Routing ────────────────────────────────────────────────────────────────
 
   function setupRoutes() {
@@ -522,6 +531,7 @@ const App = (() => {
     setupRoutes();
 
     UI.updateXPDisplay();
+    addPageFlash();
 
     // Router.init() sets up hashchange listener, [data-nav] delegation, and shows initial page
     Router.init();

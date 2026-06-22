@@ -26,6 +26,7 @@ const Organ = (() => {
   let activeNotes   = {};
   let baseOctave    = 4;
   let initialized   = false;
+  let waveViz       = null;
 
   function build() {
     const wrap = document.getElementById('organWrap');
@@ -131,7 +132,7 @@ const Organ = (() => {
         const id      = note + oct;
 
         const key = document.createElement('div');
-        key.className = `piano-key ${isBlack ? 'black' : 'white'}`;
+        key.className = `piano-key organ-key ${isBlack ? 'black' : 'white'}`;
         key.dataset.id   = id;
         key.dataset.freq = freq;
         key.innerHTML = `<span class="key-label">${note}<br><span style="font-size:0.5rem">${oct}</span></span>`;
@@ -163,7 +164,7 @@ const Organ = (() => {
     // Final C
     const finalFreq = audioEngine.noteToFreq('C', baseOctave + 2);
     const finalKey  = document.createElement('div');
-    finalKey.className = 'piano-key white';
+    finalKey.className = 'piano-key organ-key white';
     finalKey.innerHTML = `<span class="key-label"><span style="font-size:0.5rem">C${baseOctave+2}</span></span>`;
     finalKey.addEventListener('pointerdown', e => { e.preventDefault(); audioEngine.init().then(() => { const nd = audioEngine.playOrgan(finalFreq, drawbarValues); activeNotes['C'+(baseOctave+2)] = nd; finalKey.classList.add('pressed'); }); });
     finalKey.addEventListener('pointerup', () => { audioEngine.stopOrgan(activeNotes['C'+(baseOctave+2)]); delete activeNotes['C'+(baseOctave+2)]; finalKey.classList.remove('pressed'); });
@@ -212,6 +213,12 @@ const Organ = (() => {
     build();
     document.addEventListener('keydown', kbDown);
     document.addEventListener('keyup',   kbUp);
+
+    const canvas = document.getElementById('organVizCanvas');
+    if (canvas) {
+      waveViz = UI.createWaveformViz(canvas, '#c084fc');
+      waveViz.start();
+    }
   }
 
   function destroy() {
@@ -219,6 +226,7 @@ const Organ = (() => {
     activeNotes = {};
     document.removeEventListener('keydown', kbDown);
     document.removeEventListener('keyup',   kbUp);
+    if (waveViz) { waveViz.stop(); waveViz = null; }
     initialized = false;
   }
 

@@ -19,6 +19,7 @@ const Piano = (() => {
   let initialized = false;
   let noteCount = 0;
   let sessionStart = null;
+  let waveViz = null;
 
   function noteToFreq(note, octave) {
     const n = note.replace('+','');
@@ -106,6 +107,10 @@ const Piano = (() => {
     const nd = audioEngine.playPiano(freq, velocity, sustain);
     activeNotes[id] = nd;
     key.classList.add('pressed');
+    const ring = document.createElement('span');
+    ring.className = 'key-press-ring';
+    key.appendChild(ring);
+    ring.addEventListener('animationend', () => ring.remove());
     noteCount++;
     Storage.incrementNotes();
     checkAchievements();
@@ -207,11 +212,19 @@ const Piano = (() => {
 
     document.addEventListener('keydown', keyboardHandler);
     document.addEventListener('keyup', keyupHandler);
+
+    // Waveform visualizer
+    const canvas = document.getElementById('pianoVizCanvas');
+    if (canvas) {
+      waveViz = UI.createWaveformViz(canvas, '#7c5fe6');
+      waveViz.start();
+    }
   }
 
   function destroy() {
     document.removeEventListener('keydown', keyboardHandler);
     document.removeEventListener('keyup', keyupHandler);
+    if (waveViz) { waveViz.stop(); waveViz = null; }
     if (sessionStart) {
       Storage.addInstrumentTime('piano', (Date.now() - sessionStart) / 1000);
     }
