@@ -1,133 +1,418 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KeyWave — Browser Piano</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="InstrumentVerse — Play 12 instruments in your browser. Piano, Guitar, Drums, Synth and more.">
+  <meta name="theme-color" content="#0b0b16">
+  <title>InstrumentVerse</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/instruments.css">
+  <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
 
-  <!-- ===== HEADER ===== -->
-  <header class="app-header">
-    <div class="logo">
-      <span class="logo-icon">♪</span>
-      <span class="logo-text">KeyWave</span>
+<!-- ===== NAVIGATION ===== -->
+<nav class="nav" id="nav">
+  <div class="nav-brand" data-nav="home">
+    <span class="nav-logo">♪</span>
+    <span class="nav-title">InstrumentVerse</span>
+  </div>
+  <ul class="nav-links" id="navLinks">
+    <li><a class="nav-link active" data-nav="home">Home</a></li>
+    <li><a class="nav-link" data-nav="instruments">Instruments</a></li>
+    <li><a class="nav-link" data-nav="learn">Learn</a></li>
+    <li><a class="nav-link" data-nav="practice">Practice</a></li>
+    <li><a class="nav-link" data-nav="studio">Studio</a></li>
+    <li><a class="nav-link" data-nav="settings">Settings</a></li>
+  </ul>
+  <div class="nav-end">
+    <div class="xp-pill" id="xpPill" data-nav="practice">
+      <span class="xp-level" id="navLevel">Lv.1</span>
+      <div class="xp-track"><div class="xp-fill" id="navXpFill" style="width:0%"></div></div>
     </div>
-    <div class="header-controls">
-      <button id="themeToggle" class="icon-btn" title="Toggle dark/light mode">
-        <span class="theme-icon">🌙</span>
-      </button>
-    </div>
-  </header>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
 
-  <!-- ===== MAIN LAYOUT ===== -->
-  <main class="app-main">
+<!-- ===== MAIN PAGES ===== -->
+<main class="main" id="main">
 
-    <!-- ===== TOP CONTROL BAR ===== -->
-    <section class="control-bar glass-card">
-
-      <!-- Volume -->
-      <div class="control-group">
-        <label class="control-label">🔊 Volume</label>
-        <div class="slider-wrap">
-          <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.75" />
-          <span id="volumeVal" class="slider-val">75%</span>
+  <!-- ===== HOME ===== -->
+  <section class="page active" id="page-home">
+    <div class="hero">
+      <div class="hero-bg"></div>
+      <div class="hero-content">
+        <div class="hero-badge">Free · No Download · Instant Play</div>
+        <h1 class="hero-title">Play Any Instrument<br><span class="gradient-text">In Your Browser</span></h1>
+        <p class="hero-sub">12 fully playable instruments, structured lessons, practice tools, and a professional studio — all free, all instant.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary btn-lg" data-nav="instruments">Start Playing</button>
+          <button class="btn btn-ghost btn-lg" data-nav="learn">Browse Lessons</button>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat"><span class="stat-n">12</span><span class="stat-l">Instruments</span></div>
+          <div class="hero-stat"><span class="stat-n">60+</span><span class="stat-l">Lessons</span></div>
+          <div class="hero-stat"><span class="stat-n">XP</span><span class="stat-l">System</span></div>
+          <div class="hero-stat"><span class="stat-n">0</span><span class="stat-l">Downloads</span></div>
         </div>
       </div>
-
-      <!-- Sustain -->
-      <div class="control-group">
-        <label class="control-label">Sustain</label>
-        <button id="sustainBtn" class="toggle-btn" aria-pressed="false">OFF</button>
+      <div class="hero-visual" id="heroVisual">
+        <div class="hero-keys" id="heroKeys"></div>
       </div>
+    </div>
 
-      <!-- Labels toggle -->
-      <div class="control-group">
-        <label class="control-label">Key Labels</label>
-        <button id="labelsBtn" class="toggle-btn active" aria-pressed="true">ON</button>
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Quick Launch</h2>
+        <button class="btn btn-ghost btn-sm" data-nav="instruments">View all</button>
       </div>
-
-      <!-- Active note display -->
-      <div class="control-group note-display-group">
-        <label class="control-label">Playing</label>
-        <div id="noteDisplay" class="note-display">—</div>
-      </div>
-
+      <div class="quick-grid" id="quickGrid"></div>
     </section>
 
-    <!-- ===== PIANO KEYBOARD ===== -->
-    <section class="piano-section glass-card">
-      <div class="piano-container" id="pianoContainer" role="group" aria-label="Piano keyboard">
-        <!-- Keys are generated by JS -->
-      </div>
-      <div class="piano-scroll-hint">← Scroll or swipe to see more keys →</div>
-    </section>
-
-    <!-- ===== BOTTOM PANEL (3 columns) ===== -->
-    <div class="bottom-grid">
-
-      <!-- RECORD / PLAYBACK -->
-      <section class="panel glass-card">
-        <h2 class="panel-title">🎙 Recorder</h2>
-        <div class="recorder-controls">
-          <button id="recordBtn" class="action-btn record-btn">⏺ Record</button>
-          <button id="playBtn" class="action-btn" disabled>▶ Play</button>
-          <button id="clearBtn" class="action-btn danger-btn" disabled>✕ Clear</button>
-        </div>
-        <div id="recordingStatus" class="recorder-status">Idle</div>
-        <div id="recordingLength" class="recorder-length"></div>
-      </section>
-
-      <!-- METRONOME -->
-      <section class="panel glass-card">
-        <h2 class="panel-title">🥁 Metronome</h2>
-        <div class="metronome-display">
-          <div id="metronomeLight" class="metro-light"></div>
-          <div id="metroBPMDisplay" class="metro-bpm">120</div>
-          <div class="metro-bpm-label">BPM</div>
-        </div>
-        <div class="slider-wrap">
-          <input type="range" id="bpmSlider" min="40" max="240" step="1" value="120" />
-        </div>
-        <div class="metronome-btn-row">
-          <button id="metroToggle" class="action-btn">▶ Start</button>
-          <select id="beatSelect" class="beat-select">
-            <option value="4">4/4</option>
-            <option value="3">3/4</option>
-            <option value="2">2/4</option>
-          </select>
-        </div>
-      </section>
-
-      <!-- KEYBOARD GUIDE -->
-      <section class="panel glass-card">
-        <h2 class="panel-title">⌨ Keyboard Guide</h2>
-        <div class="key-guide">
-          <div class="guide-row">
-            <div class="guide-item white-guide"><kbd>A</kbd><span>C</span></div>
-            <div class="guide-item black-guide"><kbd>W</kbd><span>C#</span></div>
-            <div class="guide-item white-guide"><kbd>S</kbd><span>D</span></div>
-            <div class="guide-item black-guide"><kbd>E</kbd><span>D#</span></div>
-            <div class="guide-item white-guide"><kbd>D</kbd><span>E</span></div>
-            <div class="guide-item white-guide"><kbd>F</kbd><span>F</span></div>
-            <div class="guide-item black-guide"><kbd>T</kbd><span>F#</span></div>
-            <div class="guide-item white-guide"><kbd>G</kbd><span>G</span></div>
-            <div class="guide-item black-guide"><kbd>Y</kbd><span>G#</span></div>
-            <div class="guide-item white-guide"><kbd>H</kbd><span>A</span></div>
-            <div class="guide-item black-guide"><kbd>U</kbd><span>A#</span></div>
-            <div class="guide-item white-guide"><kbd>J</kbd><span>B</span></div>
+    <section class="section">
+      <div class="daily-challenge" id="dailyChallenge">
+        <div class="challenge-left">
+          <div class="challenge-icon">🎯</div>
+          <div>
+            <div class="challenge-label">Daily Challenge</div>
+            <div class="challenge-name" id="challengeName">Loading…</div>
+            <div class="challenge-desc" id="challengeDesc"></div>
           </div>
-          <p class="guide-tip">💡 Hold multiple keys for chords. Use <kbd>Space</kbd> to toggle sustain.</p>
         </div>
-      </section>
+        <div class="challenge-right">
+          <div class="challenge-xp" id="challengeXp">+50 XP</div>
+          <div class="challenge-progress-wrap">
+            <div class="progress-bar"><div class="progress-fill" id="challengeBar" style="width:0%"></div></div>
+            <span class="challenge-pct" id="challengePct">0%</span>
+          </div>
+          <button class="btn btn-primary btn-sm" id="challengeBtn">Start</button>
+        </div>
+      </div>
+    </section>
 
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Featured Lessons</h2>
+        <button class="btn btn-ghost btn-sm" data-nav="learn">All lessons</button>
+      </div>
+      <div class="lessons-row" id="featuredLessons"></div>
+    </section>
+  </section>
+
+  <!-- ===== INSTRUMENTS ===== -->
+  <section class="page" id="page-instruments">
+    <div class="page-hero">
+      <h1>Instruments</h1>
+      <p>Choose your instrument and start playing instantly</p>
     </div>
-  </main>
+    <div class="filter-row" id="filterRow">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="strings">Strings</button>
+      <button class="filter-btn" data-filter="keys">Keys</button>
+      <button class="filter-btn" data-filter="percussion">Percussion</button>
+      <button class="filter-btn" data-filter="wind">Wind</button>
+      <button class="filter-btn" data-filter="electronic">Electronic</button>
+    </div>
+    <div class="instruments-grid" id="instrumentsGrid"></div>
+  </section>
 
-  <script src="app.js"></script>
+  <!-- ===== PIANO ===== -->
+  <section class="page instrument-page" id="page-piano">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🎹</span>
+        <h2>Piano</h2>
+      </div>
+      <div class="inst-controls">
+        <label class="ctrl-label">Octave
+          <select id="pianoOctaveSelect" class="ctrl-select">
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+        <label class="ctrl-label ctrl-check"><input type="checkbox" id="pianoSustain"> Sustain</label>
+        <label class="ctrl-label ctrl-check"><input type="checkbox" id="pianoReverb"> Reverb</label>
+      </div>
+    </div>
+    <div class="piano-wrap" id="pianoWrap">
+      <div class="piano-keyboard" id="pianoKeyboard"></div>
+    </div>
+    <div class="key-hint">
+      <span>Keys: <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd><kbd>J</kbd> (white) &nbsp;
+      <kbd>W</kbd><kbd>E</kbd><kbd>T</kbd><kbd>Y</kbd><kbd>U</kbd> (black) &nbsp;
+      <kbd>Z</kbd>/<kbd>X</kbd> shift octave</span>
+    </div>
+  </section>
+
+  <!-- ===== GUITAR ===== -->
+  <section class="page instrument-page" id="page-guitar">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🎸</span>
+        <h2>Guitar</h2>
+      </div>
+      <div class="inst-controls">
+        <button class="mode-btn active" id="guitarModeChord">Chords</button>
+        <button class="mode-btn" id="guitarModePick">Fretboard</button>
+      </div>
+    </div>
+    <div id="guitarChordPanel" class="chord-panel">
+      <div class="chord-grid" id="guitarChordGrid"></div>
+      <div class="guitar-neck-wrap">
+        <div class="guitar-neck" id="guitarNeck"></div>
+      </div>
+    </div>
+    <div id="guitarPickPanel" class="fretboard-panel" style="display:none">
+      <div class="fretboard-wrap">
+        <div class="fretboard" id="guitarFretboard"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== UKULELE ===== -->
+  <section class="page instrument-page" id="page-ukulele">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🪕</span>
+        <h2>Ukulele</h2>
+      </div>
+    </div>
+    <div class="chord-panel">
+      <div class="chord-grid" id="ukuleleChordGrid"></div>
+      <div class="guitar-neck-wrap">
+        <div class="guitar-neck" id="ukuleleNeck"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== BASS ===== -->
+  <section class="page instrument-page" id="page-bass">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🎸</span>
+        <h2>Bass Guitar</h2>
+      </div>
+    </div>
+    <div class="fretboard-panel">
+      <div class="fretboard-wrap">
+        <div class="fretboard" id="bassFretboard"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== VIOLIN ===== -->
+  <section class="page instrument-page" id="page-violin">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🎻</span>
+        <h2>Violin</h2>
+      </div>
+    </div>
+    <div class="violin-wrap" id="violinWrap"></div>
+    <div class="key-hint"><span>Hold keys to sustain — same mapping as piano</span></div>
+  </section>
+
+  <!-- ===== DRUMS ===== -->
+  <section class="page instrument-page" id="page-drums">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🥁</span>
+        <h2>Drum Kit</h2>
+      </div>
+      <div class="inst-controls">
+        <label class="ctrl-label">Volume
+          <input type="range" id="drumsVolume" min="0" max="100" value="80" class="ctrl-range">
+        </label>
+      </div>
+    </div>
+    <div class="drums-kit" id="drumsKit"></div>
+    <div class="key-hint"><span>Keyboard shortcuts shown on each pad</span></div>
+  </section>
+
+  <!-- ===== XYLOPHONE ===== -->
+  <section class="page instrument-page" id="page-xylophone">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🎵</span>
+        <h2>Xylophone</h2>
+      </div>
+    </div>
+    <div class="mallet-wrap" id="xylophoneWrap"></div>
+    <div class="key-hint"><span>Click/tap bars · Keyboard: <kbd>1</kbd>–<kbd>9</kbd> <kbd>Q</kbd>–<kbd>I</kbd></span></div>
+  </section>
+
+  <!-- ===== MARIMBA ===== -->
+  <section class="page instrument-page" id="page-marimba">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🎵</span>
+        <h2>Marimba</h2>
+      </div>
+    </div>
+    <div class="mallet-wrap" id="marimbaWrap"></div>
+    <div class="key-hint"><span>Click/tap bars · Keyboard: <kbd>1</kbd>–<kbd>9</kbd> <kbd>Q</kbd>–<kbd>I</kbd></span></div>
+  </section>
+
+  <!-- ===== FLUTE ===== -->
+  <section class="page instrument-page" id="page-flute">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🎶</span>
+        <h2>Flute</h2>
+      </div>
+    </div>
+    <div class="flute-wrap" id="fluteWrap"></div>
+    <div class="key-hint"><span>Hold keys for sustained notes · Vibrato applies automatically</span></div>
+  </section>
+
+  <!-- ===== ORGAN ===== -->
+  <section class="page instrument-page" id="page-organ">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🎹</span>
+        <h2>Organ</h2>
+      </div>
+    </div>
+    <div class="organ-wrap" id="organWrap"></div>
+    <div class="key-hint"><span>Same keyboard mapping as Piano · Adjust drawbars for tone</span></div>
+  </section>
+
+  <!-- ===== SYNTH ===== -->
+  <section class="page instrument-page" id="page-synth">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🎛️</span>
+        <h2>Synthesizer</h2>
+      </div>
+    </div>
+    <div class="synth-wrap" id="synthWrap"></div>
+  </section>
+
+  <!-- ===== BEAT MAKER ===== -->
+  <section class="page instrument-page" id="page-beatmaker">
+    <div class="inst-header">
+      <button class="back-btn" data-nav="instruments">← Back</button>
+      <div class="inst-title-wrap">
+        <span class="inst-emoji">🎚️</span>
+        <h2>Beat Maker</h2>
+      </div>
+    </div>
+    <div class="beatmaker-wrap" id="beatmakerWrap"></div>
+  </section>
+
+  <!-- ===== LEARN ===== -->
+  <section class="page" id="page-learn">
+    <div class="page-hero">
+      <h1>Learn</h1>
+      <p>Structured lessons for every instrument, every level</p>
+    </div>
+    <div class="learn-wrap" id="learnWrap"></div>
+  </section>
+
+  <!-- ===== LESSON DETAIL ===== -->
+  <section class="page" id="page-lesson">
+    <div class="lesson-wrap" id="lessonWrap"></div>
+  </section>
+
+  <!-- ===== PRACTICE ===== -->
+  <section class="page" id="page-practice">
+    <div class="page-hero">
+      <h1>Practice</h1>
+      <p>Track your progress, earn XP, unlock achievements</p>
+    </div>
+    <div class="practice-wrap" id="practiceWrap"></div>
+  </section>
+
+  <!-- ===== STUDIO ===== -->
+  <section class="page" id="page-studio">
+    <div class="page-hero">
+      <h1>Studio</h1>
+      <p>Professional tools for every musician</p>
+    </div>
+    <div class="studio-grid">
+      <div class="studio-card">
+        <div class="studio-card-header">
+          <span class="studio-icon">♩</span>
+          <h3>Metronome</h3>
+        </div>
+        <div id="metronomeWrap"></div>
+      </div>
+      <div class="studio-card">
+        <div class="studio-card-header">
+          <span class="studio-icon">♪</span>
+          <h3>Chromatic Tuner</h3>
+        </div>
+        <div id="tunerWrap"></div>
+      </div>
+      <div class="studio-card studio-card-wide">
+        <div class="studio-card-header">
+          <span class="studio-icon">⏺</span>
+          <h3>Recorder</h3>
+        </div>
+        <div id="recorderWrap"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SETTINGS ===== -->
+  <section class="page" id="page-settings">
+    <div class="page-hero">
+      <h1>Settings</h1>
+    </div>
+    <div class="settings-wrap" id="settingsWrap"></div>
+  </section>
+
+</main>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
+
+<!-- ===== LOADING ===== -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-content">
+    <div class="loading-logo">♪</div>
+    <div class="loading-text">InstrumentVerse</div>
+    <div class="loading-bar"><div class="loading-fill" id="loadingFill"></div></div>
+    <div class="loading-sub">Loading instruments…</div>
+  </div>
+</div>
+
+<script src="js/audio-engine.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/router.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/piano.js"></script>
+<script src="js/guitar.js"></script>
+<script src="js/ukulele.js"></script>
+<script src="js/bass.js"></script>
+<script src="js/violin.js"></script>
+<script src="js/drums.js"></script>
+<script src="js/xylophone.js"></script>
+<script src="js/marimba.js"></script>
+<script src="js/flute.js"></script>
+<script src="js/organ.js"></script>
+<script src="js/synth.js"></script>
+<script src="js/beatmaker.js"></script>
+<script src="js/metronome.js"></script>
+<script src="js/tuner.js"></script>
+<script src="js/recorder.js"></script>
+<script src="js/learning.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
